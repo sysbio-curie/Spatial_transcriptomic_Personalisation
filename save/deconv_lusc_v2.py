@@ -309,7 +309,7 @@ RegModel.plot_QC(summary_name="q50")
 # # Load saved model and output h5ad
 # adata_file = os.path.join(ref_results_dir,"sc_ref.h5ad")
 # adata_ref = sc.read_h5ad(adata_file)
-# RegModel = cell2loc.models.RegressionModel.load(os.path.join(ref_results_dir,"reg_model"), adata_ref)
+# mod = cell2loc.models.RegressionModel.load(os.path.join(ref_results_dir,"reg_model"), adata_ref)
 
 # Export estimated expression in each cluster
 if "means_per_cluster_mu_fg" in adata_ref.varm.keys():

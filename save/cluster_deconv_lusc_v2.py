@@ -6,8 +6,6 @@
 import os
 import numpy as np
 import scanpy as sc
-
-os.environ["THEANO_FLAGS"] = "device=cuda,floatX=float32,force_device=True"
 import cell2location as cell2loc
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -276,7 +274,7 @@ RegModel.view_anndata_setup()
 
 print("Started training Regression model")
 # Train model
-RegModel.train(max_epochs=250, use_gpu=True)
+RegModel.train(max_epochs=250)
 
 # Check training
 RegModel.plot_history(20)
@@ -285,7 +283,7 @@ plt.close()
 
 # Export estimated cell abundance - summary of posterior distribution
 adata_ref = RegModel.export_posterior(
-    adata_ref, sample_kwargs={"num_samples": 1000, "batch_size": 2500, "use_gpu": True}
+    adata_ref, sample_kwargs={"num_samples": 1000, "batch_size": 2500}
 )
 
 # Save model
@@ -300,7 +298,7 @@ adata_ref = RegModel.export_posterior(
     use_quantiles=True,
     # choose quantiles
     add_to_varm=["q05", "q50", "q95", "q0001"],
-    sample_kwargs={"batch_size": 2500, "use_gpu": True},
+    sample_kwargs={"batch_size": 2500},
 )
 
 # QC of prior distribution
@@ -309,7 +307,7 @@ RegModel.plot_QC(summary_name="q50")
 # # Load saved model and output h5ad
 # adata_file = os.path.join(ref_results_dir,"sc_ref.h5ad")
 # adata_ref = sc.read_h5ad(adata_file)
-# RegModel = cell2loc.models.RegressionModel.load(os.path.join(ref_results_dir,"reg_model"), adata_ref)
+# mod = cell2loc.models.RegressionModel.load(os.path.join(ref_results_dir,"reg_model"), adata_ref)
 
 # Export estimated expression in each cluster
 if "means_per_cluster_mu_fg" in adata_ref.varm.keys():
@@ -323,7 +321,7 @@ else:
 inf_aver.columns = adata_ref.uns["mod"]["factor_names"]
 inf_aver.iloc[0:5, 0:5]
 
-slide = slides_list[0]
+slide = slides_list[3]
 print(f"Started analysing slide: {slide}")
 # Create directories for results specific to each slide : preprocessing and spatial deconvolution
 slide_results_dir = os.path.join(results_dir, slide)
@@ -378,7 +376,6 @@ Cell2locMod = cell2loc.models.Cell2location(
     # hyperparameter controlling normalisation of
     # within-experiment variation in RNA detection:
     detection_alpha=20,
-    use_gpu=True,
 )
 Cell2locMod.view_anndata_setup()
 
@@ -401,7 +398,6 @@ adata_vis = Cell2locMod.export_posterior(
     sample_kwargs={
         "num_samples": 1000,
         "batch_size": Cell2locMod.adata.n_obs,
-        "use_gpu": True,
     },
 )
 
