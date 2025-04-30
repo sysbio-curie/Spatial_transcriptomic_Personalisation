@@ -37,35 +37,26 @@ ad_sc.X = ad_sc.raw.X
 ad_sc = ad_sc[(ad_sc.obs["tissue"] == "lung")].copy()  # only lung
 ad_sc = ad_sc[
     (ad_sc.obs["harm_sample.type"] != "blood")
-].copy()  # keep cancer and normal
+].copy()  # Keep cancer and normal
 
 ad_sc.obs["sample_cell_type"] = (
     ad_sc.obs["harm_sample.type"].astype(str) + "-" + ad_sc.obs["cell_type"].astype(str)
 )
-# Keep only sample-cell categories with more than 500 cells
-selected_sample_cell_type = (
-    ad_sc.obs["sample_cell_type"]
-    .value_counts()[ad_sc.obs["sample_cell_type"].value_counts() > 500]
-    .index.tolist()
-)
-adata_ref = ad_sc[
-    ad_sc.obs["sample_cell_type"].isin(selected_sample_cell_type), :
-].copy()
 
 cell_type_column = "sample_cell_type"
 
+## Filter out cells, genes
 sc.pp.filter_cells(ad_sc, min_counts=500)
 sc.pp.filter_cells(ad_sc, max_counts=20000)
 sc.pp.filter_genes(ad_sc, min_cells=5)
 ad_sc = ad_sc[:, ~np.array([_.startswith("MT-") for _ in ad_sc.var.index])]
 ad_sc = ad_sc[:, ~np.array([_.startswith("mt-") for _ in ad_sc.var.index])]
 
-ad_sc = ad_sc[
-    ad_sc.obs["harm_study"] == "Qian et al"
-].copy()  # reduce batch effect due to different studies
-ad_sc = ad_sc[
-    ad_sc.obs["assay"] == "10x 3' v2"
-].copy()  # reduce batche effect between experiments
+# Reduce batch effect due to different studies
+ad_sc = ad_sc[ad_sc.obs["harm_study"] == "Qian et al"].copy()
+# Reduce batche effect between experiments
+ad_sc = ad_sc[ad_sc.obs["assay"] == "10x 3' v2"].copy()
+# Avoid over representation of one sample_cell_type
 ad_sc = ad_sc[
     ad_sc.obs.index.isin(
         ad_sc.obs.groupby("sample_cell_type")
@@ -79,7 +70,14 @@ ad_sc = ad_sc[
         .reset_index(level=0, drop=True)
         .index
     )
-].copy()  # avoid over representation of one sample_cell_type
+].copy()
+# Keep only sample-cell categories with more than 500 cells
+selected_sample_cell_type = (
+    ad_sc.obs["sample_cell_type"]
+    .value_counts()[ad_sc.obs["sample_cell_type"].value_counts() > 500]
+    .index.tolist()
+)
+ad_sc = ad_sc[ad_sc.obs["sample_cell_type"].isin(selected_sample_cell_type), :].copy()
 
 print(ad_sc.X.max(), ad_sc.shape)
 
@@ -96,10 +94,12 @@ sc.pl.umap(
     legend_loc="on data",
 )
 plt.tight_layout()
+plt.show()
 
 if ad_sc.X.max() < 20:
     ad_sc.X = np.exp(ad_sc.X) - 1
-plt.hist(ad_sc.X.sum(1), bins=100)
+plt.hist(ad_sc.X.sum(1))
+plt.tight_layout()
 plt.show()
 
 # Normalise
@@ -177,6 +177,7 @@ sc.pp.neighbors(ad_sc, metric="cosine", n_neighbors=30, n_pcs=30)
 sc.tl.umap(ad_sc, min_dist=0.5, spread=1, maxiter=60)
 
 # preprocessing plots
+sns.set_context("paper", font_scale=1.6)
 fig, axs = plt.subplots(1, 1, figsize=(10, 10))
 sc.pl.umap(
     ad_sc,
@@ -185,10 +186,9 @@ sc.pl.umap(
     frameon=False,
     show=False,
     ax=axs,
-    legend_loc="on data",
 )
 plt.tight_layout()
 
 ## Write processed data
 if run == "local":
-    ad_sc.write("/home/agathes/work/Sc_data//Sc_cellxgene_processed_lung_batch.h5ad")
+    ad_sc.write("/home/agathes/work/Sc_data/Sc_cellxgene_processed_lung_batch.h5ad")
