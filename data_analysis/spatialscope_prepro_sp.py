@@ -7,22 +7,28 @@ import openslide
 
 from image_alignement import *
 
-
-parser = argparse.ArgumentParser(description="simulation sour_sep")
-parser.add_argument(
-    "--Slide_Path",
-    type=str,
-    help="Path to spatial and image data of one slide",
-    default=None,
-)
-args = parser.parse_args()
+use = "cluster"
 
 ## Read spatial transcripotmic data and the two image data files
-adata_sp = sc.read_visium(args.Slide_Path)
-ndpi_file = glob.glob(os.path.join(args.Slide_Path, "*.ndpi"))  # wsi
-tiff_file = glob.glob(
-    os.path.join(args.Slide_Path, "*.tiff")
-)  # cropped template for visium
+if use == "cluster":
+    parser = argparse.ArgumentParser(description="simulation sour_sep")
+    parser.add_argument(
+        "--Slide_Path",
+        type=str,
+        help="Path to spatial and image data of one slide",
+        default=None,
+    )
+    args = parser.parse_args()
+
+    adata_sp = sc.read_visium(args.Slide_Path)
+    ndpi_file = glob.glob(os.path.join(args.Slide_Path, "*.ndpi"))[0]  # wsi
+    tiff_file = glob.glob(os.path.join(args.Slide_Path, "*.tiff"))[0]  # template
+elif use == "local":
+    path_to_slide = "/home/agathes/work/LUSC_v2/18P06762_test"
+    adata_sp = sc.read_visium(path_to_slide)
+    ndpi_file = glob.glob(os.path.join(path_to_slide, "*.ndpi"))[0]  # wsi
+    tiff_file = glob.glob(os.path.join(path_to_slide, "*.tiff"))[0]  # template
+
 
 ## Change names of vars and column name while saving the original var column to have enselbe_ids as var names
 adata_sp.var["feature_name"] = adata_sp.var_names
@@ -39,7 +45,7 @@ def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int 
     )
 
     ## Change cooridnates of spatial data to match cropped ndpi image
-    spatial_coordinates = adata_sp.obsm["spatial"].values
+    spatial_coordinates = np.array(adata_sp.obsm["spatial"], dtype=int)
     # Saved transformation matrix is defined to get coordinates in level 0 of ndpi image
     new_spatial_coordinates = transform_spatial_coordinates(
         spatial_coordinates, (transformation_matrix / (2**analysis_level))
@@ -47,9 +53,20 @@ def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int 
     adata_sp.obsm["spatial"] = new_spatial_coordinates
 
     ## Crop ndpi image, keep only lelvel of analysis and save as tiff image for futur use
-    xmin, ymin, w, h = cropped_coordinates_matrix[
-        cropped_coordinates_matrix["level"] == analysis_level
-    ].iloc[:, 1:]
+    xmin, ymin, _, _ = (
+        cropped_coordinates_matrix[cropped_coordinates_matrix["level"] == 0]
+        .iloc[:, 1:]
+        .astype(int)
+        .values[0]
+    )
+    _, _, w, h = (
+        cropped_coordinates_matrix[
+            cropped_coordinates_matrix["level"] == analysis_level
+        ]
+        .iloc[:, 1:]
+        .astype(int)
+        .values[0]
+    )
     slide = openslide.OpenSlide(ndpi_file)
     region = slide.read_region((xmin, ymin), level=analysis_level, size=(w, h))
     region_rgb = region.convert("RGB")
@@ -58,15 +75,14 @@ def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int 
 
 adata_sp, region_rgb = correspondance_sp_image(adata_sp, ndpi_file, tiff_file)
 
-## Save image
-region_rgb.save(os.path.join(args.Slide_Path, "prepro_image.tiff"), format="TIFF")
-## Save file
-adata_sp.write(os.path.join(args.Slide_Path, "filtered_feature_bc_matrix_prepro.h5ad"))
-
-# df = pd.read_csv(tissue_position_path)
-# spatial_coordinates = df[["pxl_col_in_fullres", "pxl_row_in_fullres"]].values
-# new_spatial_coordinates = transform_spatial_coordinates(
-#     spatial_coordinates, transformation_matrix
-# )
-# df[["pxl_col_in_fullres", "pxl_row_in_fullres"]] = new_spatial_coordinates
-# df.to_csv(os.path.join(sample_folder, "tissue_positions.csv"), index=False)
+# ## Save preprocessed image and spatial transcriptomic data
+if use == "cluster":
+    region_rgb.save(os.path.join(args.Slide_Path, "prepro_image.tiff"), format="TIFF")
+    adata_sp.write(
+        os.path.join(args.Slide_Path, "filtered_feature_bc_matrix_prepro.h5ad")
+    )
+elif use == "local":
+    region_rgb.save(os.path.join(path_to_slide, "prepro_image.tiff"), format="TIFF")
+    adata_sp.write(
+        os.path.join(path_to_slide, "filtered_feature_bc_matrix_prepro.h5ad")
+    )
