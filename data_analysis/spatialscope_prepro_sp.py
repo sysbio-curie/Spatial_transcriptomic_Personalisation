@@ -50,16 +50,14 @@ def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int 
     new_spatial_coordinates = transform_spatial_coordinates(
         spatial_coordinates, (transformation_matrix / (2**analysis_level))
     )
-    adata_sp.obsm["spatial"] = new_spatial_coordinates
-
-    ## Crop ndpi image, keep only lelvel of analysis and save as tiff image for futur use
-    xmin, ymin, _, _ = (
+    ## Crop ndpi image, keep only level of analysis and save as tiff image for futur use
+    xmin_level_0, ymin_level_0, _, _ = (
         cropped_coordinates_matrix[cropped_coordinates_matrix["level"] == 0]
         .iloc[:, 1:]
         .astype(int)
         .values[0]
     )
-    _, _, w, h = (
+    xmin, ymin, w, h = (
         cropped_coordinates_matrix[
             cropped_coordinates_matrix["level"] == analysis_level
         ]
@@ -67,15 +65,25 @@ def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int 
         .astype(int)
         .values[0]
     )
+
+    # Adapt spatial coordinates to crop
+    new_spatial_coordinates[:, 0] = new_spatial_coordinates[:, 0] - xmin
+    new_spatial_coordinates[:, 1] = new_spatial_coordinates[:, 1] - ymin
+    adata_sp.obsm["spatial"] = new_spatial_coordinates
+
     slide = openslide.OpenSlide(ndpi_file)
-    region = slide.read_region((xmin, ymin), level=analysis_level, size=(w, h))
+    region = slide.read_region(
+        (xmin_level_0, ymin_level_0), level=analysis_level, size=(w, h)
+    )
+    #    region = slide.read_region((0, 0), level=analysis_level, size=slide.level_dimensions[analysis_level])
     region_rgb = region.convert("RGB")
     return adata_sp, region_rgb
 
 
 adata_sp, region_rgb = correspondance_sp_image(adata_sp, ndpi_file, tiff_file)
+# adata_sp = correspondance_sp_image(adata_sp, ndpi_file, tiff_file)
 
-# ## Save preprocessed image and spatial transcriptomic data
+## Save preprocessed image and spatial transcriptomic data
 if use == "cluster":
     region_rgb.save(os.path.join(args.Slide_Path, "prepro_image.tiff"), format="TIFF")
     adata_sp.write(
