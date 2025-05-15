@@ -66,9 +66,9 @@ def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int 
         .values[0]
     )
 
-    # Adapt spatial coordinates to crop
-    new_spatial_coordinates[:, 0] = new_spatial_coordinates[:, 0] - xmin
-    new_spatial_coordinates[:, 1] = new_spatial_coordinates[:, 1] - ymin
+    # Adapt spatial coordinates
+    # new_spatial_coordinates[:, 0] = new_spatial_coordinates[:, 0] - xmin
+    # new_spatial_coordinates[:, 1] = new_spatial_coordinates[:, 1] - ymin
     adata_sp.obsm["spatial"] = new_spatial_coordinates
 
     slide = openslide.OpenSlide(ndpi_file)
@@ -77,6 +77,19 @@ def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int 
     )
     #    region = slide.read_region((0, 0), level=analysis_level, size=slide.level_dimensions[analysis_level])
     region_rgb = region.convert("RGB")
+
+    # Add custom high resolution image corresponding to new spatial coordinates
+    slide_id = list(adata_sp.uns["spatial"].keys())[0]
+    adata_sp.uns["spatial"][slide_id]["images"]["custom"] = np.array(region_rgb)
+
+    max_x, max_y = np.max(adata_sp.obsm["spatial"], axis=0)
+    x_scale = w / max_x
+    y_scale = h / max_y
+    scale_factor = (x_scale + y_scale) / 2
+    adata_sp.uns["spatial"][slide_id]["scalefactors"][
+        "tissue_custom_scalef"
+    ] = scale_factor
+
     return adata_sp, region_rgb
 
 
