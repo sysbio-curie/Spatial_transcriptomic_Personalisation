@@ -1,3 +1,6 @@
+## Spatial transcriptomic data preprocessing to run Spatialscope
+# Author Agathe Sobkowicz started : ?/05/2025
+
 ## Imports
 import argparse
 import scanpy as sc
@@ -50,6 +53,7 @@ def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int 
     new_spatial_coordinates = transform_spatial_coordinates(
         spatial_coordinates, (transformation_matrix / (2**analysis_level))
     )
+
     ## Crop ndpi image, keep only level of analysis and save as tiff image for futur use
     xmin_level_0, ymin_level_0, _, _ = (
         cropped_coordinates_matrix[cropped_coordinates_matrix["level"] == 0]
@@ -88,7 +92,7 @@ def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int 
     scale_factor = (x_scale + y_scale) / 2
     adata_sp.uns["spatial"][slide_id]["scalefactors"][
         "tissue_custom_scalef"
-    ] = scale_factor
+    ] = 1  # scale_factor
 
     return adata_sp, region_rgb
 
