@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import seaborn as sns
 import scanpy as sc
+import mygene
 
 import sys
 
@@ -21,24 +22,57 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-run = "cluster"
+run = "local"
 
 ## Read data
 if run == "local":
     ad_sc = sc.read("/home/agathes/work/Sc_data/Sc_cellxgene.h5ad")
+    ligand_recept = pd.read_csv(
+        "/home/agathes/work/SpatialScope/extdata/ligand_receptors.txt", sep="\t"
+    )
+    sizek_df = pd.read_csv(
+        "/home/agathes/work/PhysiBoSS_Personalisation/models/sizek_dictionary.csv"
+    )
 elif run == "cluster":
     ad_sc = sc.read(
         "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/Sc_cellxgene.h5ad"
     )
+    ligand_recept = pd.read_csv(
+        "/mnt/beegfs/home/asobkow1/persistent/spatialscope/SpatialScope/extdata/ligand_receptors.txt",
+        sep="\t",
+    )
+    sizek_df = pd.read_csv(
+        "/mnt/beegfs/home/asobkow1/persistent/models/sizek_dictionary.csv"
+    )
 
+## Restore raw data keeping normalised data in a "normal" layer
 ad_sc.layers["normalized"] = ad_sc.X.copy()
 ad_sc.X = ad_sc.raw.X
+
+# print("Max count", ad_sc.X.max())
+# print("Min count", ad_sc.X.min())
+# print("Mean count", ad_sc.X.mean())
+
+## Filtering
 # Keep only lung tissue without blood samples
 ad_sc = ad_sc[(ad_sc.obs["tissue"] == "lung")].copy()  # only lung
 ad_sc = ad_sc[
     (ad_sc.obs["harm_sample.type"] != "blood")
 ].copy()  # keep cancer and normal
+# Filter cells from single cell reference
+sc.pp.filter_cells(ad_sc, min_counts=500)  # Default
+sc.pp.filter_cells(ad_sc, max_counts=20000)
+sc.pp.filter_genes(ad_sc, min_cells=3)
+ad_sc = ad_sc[:, ~np.array([_.startswith("MT-") for _ in ad_sc.var.index])]
+ad_sc = ad_sc[:, ~np.array([_.startswith("mt-") for _ in ad_sc.var.index])]
 
+ad_sc = ad_sc[
+    ad_sc.obs["harm_study"] == "Qian et al"
+].copy()  # reduce batch effect due to different studies
+ad_sc = ad_sc[
+    ad_sc.obs["assay"] == "10x 3' v2"
+].copy()  # reduce batch effect between experiments
+## Create new sample_type + cell_type and Filter according to cell type
 ad_sc.obs["sample_cell_type"] = (
     ad_sc.obs["harm_sample.type"].astype(str) + "-" + ad_sc.obs["cell_type"].astype(str)
 )
@@ -48,24 +82,8 @@ selected_sample_cell_type = (
     .value_counts()[ad_sc.obs["sample_cell_type"].value_counts() > 500]
     .index.tolist()
 )
-adata_ref = ad_sc[
-    ad_sc.obs["sample_cell_type"].isin(selected_sample_cell_type), :
-].copy()
-
-cell_type_column = "sample_cell_type"
-
-sc.pp.filter_cells(ad_sc, min_counts=500)
-sc.pp.filter_cells(ad_sc, max_counts=20000)
-sc.pp.filter_genes(ad_sc, min_cells=5)
-ad_sc = ad_sc[:, ~np.array([_.startswith("MT-") for _ in ad_sc.var.index])]
-ad_sc = ad_sc[:, ~np.array([_.startswith("mt-") for _ in ad_sc.var.index])]
-
-ad_sc = ad_sc[
-    ad_sc.obs["harm_study"] == "Qian et al"
-].copy()  # reduce batch effect due to different studies
-ad_sc = ad_sc[
-    ad_sc.obs["assay"] == "10x 3' v2"
-].copy()  # reduce batche effect between experiments
+ad_sc = ad_sc[ad_sc.obs["sample_cell_type"].isin(selected_sample_cell_type), :].copy()
+# Avoid over representation of one sample_cell_type with no more 3000 cells per sample_cell_type
 ad_sc = ad_sc[
     ad_sc.obs.index.isin(
         ad_sc.obs.groupby("sample_cell_type")
@@ -79,34 +97,61 @@ ad_sc = ad_sc[
         .reset_index(level=0, drop=True)
         .index
     )
-].copy()  # avoid over representation of one sample_cell_type
+].copy()
 
-print(ad_sc.X.max(), ad_sc.shape)
+cell_type_column = "sample_cell_type"
 
-# Plot preprocessing figures
-sns.set_context("paper", font_scale=1.6)
-fig, axs = plt.subplots(1, 1, figsize=(10, 10))
-sc.pl.umap(
-    ad_sc,
-    color=cell_type_column,
-    size=15,
-    frameon=False,
-    show=False,
-    ax=axs,
-    legend_loc="on data",
-)
-plt.tight_layout()
+print("Max count", ad_sc.X.max())
+print("Min count", ad_sc.X.min())
+print("Mean count", ad_sc.X.mean())
+print("Number of cells and genes", ad_sc.shape)
 
+## Plot preprocessing figures
 if ad_sc.X.max() < 20:
     ad_sc.X = np.exp(ad_sc.X) - 1
-plt.hist(ad_sc.X.sum(1), bins=100)
+plt.hist(ad_sc.X.sum(1), bins=100)  # Plot function changes scale
+plt.title("Total counts")
+plt.xlabel("Cells")
+plt.ylabel("Count")
 plt.show()
 
-# Normalise
-ad_sc.raw = ad_sc.copy()
-sc.pp.normalize_total(ad_sc, target_sum=2000)
+## Renormalise and log1p after filtering
+sc.pp.normalize_total(ad_sc, target_sum=20000)  # According to raw counts
+sc.pp.log1p(ad_sc)
 
-# Identify import genes
+
+## Define a class of marker genes with higly variable, cell type markers,
+## ligand recepter genes, model nodes and CAF marker genes
+def convert_genes_ensembles(gene_list):
+    mg = mygene.MyGeneInfo()
+    ensembl_dict = mg.querymany(
+        gene_list, scopes="symbol", fields="ensembl.gene", species="human"
+    )
+    ensembl_list = []
+    for gene in ensembl_dict:
+        ensembl = gene.get("ensembl")
+        if isinstance(ensembl, dict):
+            ensembl_list.append([gene["query"], ensembl["gene"]])
+        elif isinstance(ensembl, list) and len(ensembl) > 0:
+            ensembl_list.append([gene["query"], ensembl[0]["gene"]])
+    return np.array(ensembl_list)
+
+
+def convert_ensembl_to_genes(ensembl_list):
+    mg = mygene.MyGeneInfo()
+    gene_dict = mg.querymany(
+        ensembl_list, scopes="ensembl.gene", fields="symbol", species="human"
+    )
+    gene_list = []
+    for gene in gene_dict:
+        symbol = gene.get("symbol")
+        if symbol:
+            gene_list.append([gene["query"], symbol])
+    return np.array(gene_list)
+
+
+# Identify highly variable and marker genes
+ad_sc.raw = ad_sc.copy()
 sc.pp.highly_variable_genes(ad_sc, flavor="seurat_v3", n_top_genes=1000)
 sc.tl.rank_genes_groups(ad_sc, groupby=cell_type_column, method="wilcoxon")
 markers_df = pd.DataFrame(ad_sc.uns["rank_genes_groups"]["names"]).iloc[0:100, :]
@@ -114,67 +159,102 @@ markers = list(np.unique(markers_df.melt().value.values))
 markers = list(
     set(ad_sc.var.loc[ad_sc.var["highly_variable"] == 1].index) | set(markers)
 )  # highly variable genes + cell type marker genes
+# Ligand recepteur genes
+ligand_recept = list(set(ligand_recept.melt()["value"].values))  # keep unique values
+ligand_recept = [
+    _.upper() for _ in ligand_recept
+]  # upper case to correspond with humans
+ligand_recept = convert_genes_ensembles(ligand_recept)[:, 1]
 
-ligand_recept = list(
-    set(
-        pd.read_csv(
-            "/home/agathes/work/SpatialScope/extdata/ligand_receptors.txt", sep="\t"
-        )
-        .melt()["value"]
-        .values
-    )
+# Add gene from nodes in sizek model
+sizek_genes = sorted(sizek_df["Genes"][sizek_df["Genes"] != "Not_assigned"].to_list())
+sizek_ensembl = convert_genes_ensembles(sizek_genes)[:, 1]
+# Add genes from Grout et al. 2022 papper
+caf_genes = [
+    "NOX4",
+    "PDCD1",
+    "CD274",
+    "MMP2",
+    "CLDN5",
+    "PECAM1",
+    "TFF3",
+    "PROX1",
+    "MCAM",
+    "COX4I2",
+    "DES",
+    "CD10",
+    "VEGFD",
+    "IL6",
+    "PI16",
+    "CLU",
+    "FAP",
+    "ADH1B",
+    "POSTN",
+    "LRRC15",
+    "GREM1",
+    "ACTA2",
+    "MMP2",
+    "MYH11",
+    "ACTA2",
+    "COL3A1",
+    "BGN",
+    "TCF21",
+    "COL9A1",
+    "COL27A1",
+    "COL4A2",
+    "COL11A1",
+    "COL12A1",
+]
+caf_genes = convert_genes_ensembles(caf_genes)[:, 1]
+
+other_genes = [
+    "PDCD1",
+    "CD274",
+    "CLDN5",
+    "PECAM1",
+    "TFF3",
+    "PROX1",
+    "MCAM",
+    "COX4I2",
+    "DES",
+]
+other_genes = convert_genes_ensembles(other_genes)[:, 1]
+
+# redundunt_genes = [
+#     "TGFB",
+#     "PDGFRA",
+#     "FGFR4",
+#     "ICAM1",
+#     "CD34",
+#     "LEPR",
+#     "COL1A1",
+#     "COL4A1",
+#     "CCL19",
+#     "CCL21",
+#     "CCL3",
+#     "CCL5",
+#     "VCAM1",
+#     "CCR5",
+#     "TNFSF13B",
+# ]
+print(
+    "Number of selected markers :",
+    len(markers + ligand_recept + caf_genes + other_genes),
 )
-# if scRNA-seq reference is from human tissue, run following code to make gene name consistent
-ligand_recept = [_.upper() for _ in ligand_recept]
-add_genes = (
-    "DCN GSN PDGFRA\
-RGS5 ABCC9 KCNJ8\
-MYH11 TAGLN ACTA2\
-GPAM FASN LEP\
-MSLN WT1 BNC1\
-VWF PECAM1 CDH5\
-CD14 C1QA CD68\
-CD8A IL7R CD40LG\
-NPPA MYL7 MYL4\
-MYH7 MYL2 FHL2\
-DLC1 EBF1 SOX5\
-FHL1 CNN1 MYH9\
-CRYAB NDUFA4 COX7C\
-PCDH7 FHL2 MYH7\
-PRELID2 GRXCR2 AC107068.2\
-MYH6 NPPA MYL4\
-CNN1 MYH9 DUSP27\
-CKM COX41L NDUFA4\
-DLC1 PLA2GS MAML2\
-HAMP SLIT3 ALDH1A2\
-POSTN TNC FAP\
-SCN7A BMPER ACSM1\
-FBLN2 PCOLCE2 LINC01133\
-CD36 EGFLAM FTL1\
-CFH ID4 KCNT2\
-PTX3 OSMR IL6ST\
-DCN PTX3 C1QA\
-NOTCH1 NOTCH2 NOTCH3 NOTCH4 DLL1 DLL4 JAG1 JAG2\
-CDH5 SEMA3G ACKR1 MYH11".split()
-    + ["TNNT2", "PLN", "MYH7", "MYL2", "IRX3", "IRX5", "MASP1"]
-)  # some important genes that we interested
-
-markers = markers + add_genes + ligand_recept
-len(markers)
+markers = list(set(markers + ligand_recept + caf_genes + other_genes))  # + add_genes
+print("Number of selected markers :", len(markers))
 
 # Add marker column
+# ad_sc.var["Marker"] = ad_sc.var["feature_name"].isin(markers)
+# ad_sc.var["highly_variable"] = ad_sc.var["highly_variable"] | ad_sc.var["Marker"]
 ad_sc.var.loc[ad_sc.var.index.isin(markers), "Marker"] = True
 ad_sc.var["Marker"] = ad_sc.var["Marker"].fillna(False)
 ad_sc.var["highly_variable"] = ad_sc.var["Marker"]
 
 # Log data
-sc.pp.log1p(ad_sc)
 sc.pp.pca(ad_sc, svd_solver="arpack", n_comps=30, use_highly_variable=True)
-
-ad_sc.X.max()
-
-sc.pp.neighbors(ad_sc, metric="cosine", n_neighbors=30, n_pcs=30)
-sc.tl.umap(ad_sc, min_dist=0.5, spread=1, maxiter=60)
+sc.pp.neighbors(ad_sc)
+sc.tl.umap(ad_sc)
 
 # preprocessing plots
 fig, axs = plt.subplots(1, 1, figsize=(10, 10))
@@ -183,14 +263,17 @@ sc.pl.umap(
     color=cell_type_column,
     size=15,
     frameon=False,
-    show=False,
+    # show=False,
     ax=axs,
-    legend_loc="on data",
+    # legend_loc="on data",
 )
 plt.tight_layout()
+plt.show()
 
 ## Write processed data
 if run == "local":
     ad_sc.write("/home/agathes/work/Sc_data/Sc_cellxgene_processed_lung_batch.h5ad")
 elif run == "cluster":
-    ad_sc.write("/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/Sc_cellxgene_processed_lung_batch.h5ad")
+    ad_sc.write(
+        "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/Sc_cellxgene_processed_lung_batch.h5ad"
+    )
