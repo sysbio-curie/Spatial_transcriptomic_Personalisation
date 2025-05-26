@@ -159,16 +159,18 @@ markers = list(np.unique(markers_df.melt().value.values))
 markers = list(
     set(ad_sc.var.loc[ad_sc.var["highly_variable"] == 1].index) | set(markers)
 )  # highly variable genes + cell type marker genes
+print(markers)
 # Ligand recepteur genes
 ligand_recept = list(set(ligand_recept.melt()["value"].values))  # keep unique values
 ligand_recept = [
     _.upper() for _ in ligand_recept
 ]  # upper case to correspond with humans
 ligand_recept = convert_genes_ensembles(ligand_recept)[:, 1]
-
+print(ligand_recept)
 # Add gene from nodes in sizek model
 sizek_genes = sorted(sizek_df["Genes"][sizek_df["Genes"] != "Not_assigned"].to_list())
 sizek_ensembl = convert_genes_ensembles(sizek_genes)[:, 1]
+print(sizek_ensembl)
 # Add genes from Grout et al. 2022 papper
 caf_genes = [
     "NOX4",
@@ -205,8 +207,8 @@ caf_genes = [
     "COL11A1",
     "COL12A1",
 ]
-caf_genes = convert_genes_ensembles(caf_genes)[:, 1]
-
+caf_ensembl = convert_genes_ensembles(caf_genes)[:, 1]
+print(caf_ensembl)
 other_genes = [
     "PDCD1",
     "CD274",
@@ -218,8 +220,8 @@ other_genes = [
     "COX4I2",
     "DES",
 ]
-other_genes = convert_genes_ensembles(other_genes)[:, 1]
-
+other_ensembl = convert_genes_ensembles(other_genes)[:, 1]
+print(other_ensembl)
 # redundunt_genes = [
 #     "TGFB",
 #     "PDGFRA",
@@ -239,9 +241,11 @@ other_genes = convert_genes_ensembles(other_genes)[:, 1]
 # ]
 print(
     "Number of selected markers :",
-    len(markers + ligand_recept + caf_genes + other_genes),
+    len(markers + ligand_recept + sizek_ensembl + caf_ensembl + other_ensembl),
 )
-markers = list(set(markers + ligand_recept + caf_genes + other_genes))  # + add_genes
+markers = list(
+    set(markers + ligand_recept + sizek_ensembl + caf_genes + other_genes)
+)  # + add_genes
 print("Number of selected markers :", len(markers))
 
 # Add marker column
