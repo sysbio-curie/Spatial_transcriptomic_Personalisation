@@ -8,75 +8,18 @@ import scanpy as sc
 import cell2location as cell2loc
 import matplotlib.pyplot as plt
 
-
-## Define paths to data and results
 current_dir = os.getcwd()
 
-sc_data_dir = os.path.join(current_dir, "data/Sc_data/Sc_cellxgene.h5ad")
+## Import data
+sc_data_dir = os.path.join(current_dir, "data/Sc_data/Sc_cellxgene_filtered.h5ad")
+adata_ref = sc.read_h5ad(sc_data_dir)
+
+## Paths to results
 results_dir = os.path.join(current_dir, "results")
 os.makedirs(results_dir, exist_ok=True)
 
 ref_results_dir = os.path.join(results_dir, "reference_signatures")
 os.makedirs(ref_results_dir, exist_ok=True)
-
-
-## Preprocessing functions
-def sc_preprocessing(adata_ref):
-    """Preprocessing of single cell data used to define cell type references"""
-    # Convert downloaded preprocessed data back to raw data saving normalised values
-    adata_ref.layers["normalized"] = adata_ref.X.copy()
-    adata_ref.X = adata_ref.raw.X
-    # Keep only lung tissue without blood samples
-    adata_ref = adata_ref[(adata_ref.obs["tissue"] == "lung")].copy()  # only lung
-    adata_ref = adata_ref[
-        (adata_ref.obs["harm_sample.type"] != "blood")
-    ].copy()  # keep cancer and normal
-
-    # Create category storing both sample and cell types
-    adata_ref.obs["sample_cell_type"] = (
-        adata_ref.obs["harm_sample.type"].astype(str)
-        + "-"
-        + adata_ref.obs["cell_type"].astype(str)
-    )
-    # Keep only sample-cell categories with more than 500 cells
-    selected_sample_cell_type = (
-        adata_ref.obs["sample_cell_type"]
-        .value_counts()[adata_ref.obs["sample_cell_type"].value_counts() > 500]
-        .index.tolist()
-    )
-    adata_ref = adata_ref[
-        adata_ref.obs["sample_cell_type"].isin(selected_sample_cell_type), :
-    ].copy()
-
-    # Genes/var are already names by ENSEBL ID, which is necessary for matching between single cell and spatial data
-    # Change column name to match with the spatial dataset
-    adata_ref.var.index.name = "gene_ids_2"
-
-    # Mitochondrial genes
-    adata_ref.var["mt"] = adata_ref.var["feature_name"].str.startswith("MT-")
-    # Ribosomal genes
-    adata_ref.var["ribo"] = adata_ref.var["feature_name"].str.startswith(("RPS", "RPL"))
-    sc.pp.calculate_qc_metrics(
-        adata_ref, qc_vars=["mt", "ribo"], inplace=True, percent_top=[20], log1p=True
-    )
-
-    # Filter out none relevant genes
-    selected_genes = cell2loc.utils.filtering.filter_genes(
-        adata_ref,
-        cell_count_cutoff=5,
-        cell_percentage_cutoff2=0.03,
-        nonz_mean_cutoff=1.2,
-    )
-    adata_ref = adata_ref[:, selected_genes].copy()
-
-    return adata_ref
-
-
-## Import and Preprocess single-cell data
-print("Importing and preprocessing single cell reference dataset :")
-adata_ref = sc.read_h5ad(sc_data_dir)
-adata_ref = sc_preprocessing(adata_ref)
-
 
 ## Regression model
 print("Setting up data for Regression model")
@@ -86,10 +29,7 @@ cell2loc.models.RegressionModel.setup_anndata(
     adata=adata_ref,
     batch_key="donor_id",  # 10X reaction / sample / batch
     labels_key="sample_cell_type",  # sample-cell type, covariate used for constructing signatures
-    categorical_covariate_keys=[
-        "assay",
-        "harm_study",
-    ],  # multiplicative technical effects (platform, 3' vs 5')
+    categorical_covariate_keys=[],
 )
 
 # Create the regression model
@@ -133,16 +73,4 @@ RegModel.plot_QC(summary_name="q50")
 # # Load saved model and output h5ad
 # adata_file = os.path.join(ref_results_dir,"sc_ref.h5ad")
 # adata_ref = sc.read_h5ad(adata_file)
-# mod = cell2loc.models.RegressionModel.load(os.path.join(ref_results_dir,"reg_model"), adata_ref)
-
-# Export estimated expression in each cluster
-if "means_per_cluster_mu_fg" in adata_ref.varm.keys():
-    inf_aver = adata_ref.varm["means_per_cluster_mu_fg"][
-        [f"means_per_cluster_mu_fg_{i}" for i in adata_ref.uns["mod"]["factor_names"]]
-    ].copy()
-else:
-    inf_aver = adata_ref.var[
-        [f"means_per_cluster_mu_fg_{i}" for i in adata_ref.uns["mod"]["factor_names"]]
-    ].copy()
-inf_aver.columns = adata_ref.uns["mod"]["factor_names"]
-inf_aver.iloc[0:5, 0:5]
+# mod = cell2loc.models.RegressionModel.load(os.path.join(ref_results_dir,"reg_model"), adata_ref

@@ -1,26 +1,14 @@
-## Single cell RNAseq preprocessing to run Spatialscope
-# Author Agathe Sobkowicz started : 29/04
-# Based on the demo of Spatial scope on Human heart Visium data
+## Single cell RNAseq preprocessing to run before Cell2location and Spatialscope
+# Author Agathe Sobkowicz started : 28/05
 
 
 ## Imports
 import numpy as np
 import pandas as pd
-import pathlib
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-import seaborn as sns
 import scanpy as sc
 import mygene
 
-import sys
-
-sys.path.append("../src")
-# from utils import *
-
-import warnings
-
-warnings.filterwarnings("ignore")
+import matplotlib.pyplot as plt
 
 run = "local"
 
@@ -53,25 +41,20 @@ ad_sc.X = ad_sc.raw.X
 # print("Min count", ad_sc.X.min())
 # print("Mean count", ad_sc.X.mean())
 
-## Filtering
-# Keep only lung tissue without blood samples
-ad_sc = ad_sc[(ad_sc.obs["tissue"] == "lung")].copy()  # only lung
+## Extract data
+ad_sc = ad_sc[ad_sc.obs["tissue"] == "lung"].copy()  # keep only lung tissue
 ad_sc = ad_sc[
-    (ad_sc.obs["harm_sample.type"] != "blood")
-].copy()  # keep cancer and normal
-# Filter cells from single cell reference
-sc.pp.filter_cells(ad_sc, min_counts=500)  # Default
-sc.pp.filter_cells(ad_sc, max_counts=20000)
+    ad_sc.obs["harm_sample.type"].isin(["normal", "tumor"])
+].copy()  # keep normal and tumor
+ad_sc = ad_sc[ad_sc.obs["harm_study"] == "Qian et al"].copy()  # keep one study
+ad_sc = ad_sc[ad_sc.obs["assay"] == "10x 3' v2"].copy()  # keep one technique
+
+## Filter
+sc.pp.filter_cells(ad_sc, min_counts=500)
 sc.pp.filter_genes(ad_sc, min_cells=3)
 ad_sc = ad_sc[:, ~np.array([_.startswith("MT-") for _ in ad_sc.var.index])]
 ad_sc = ad_sc[:, ~np.array([_.startswith("mt-") for _ in ad_sc.var.index])]
 
-ad_sc = ad_sc[
-    ad_sc.obs["harm_study"] == "Qian et al"
-].copy()  # reduce batch effect due to different studies
-ad_sc = ad_sc[
-    ad_sc.obs["assay"] == "10x 3' v2"
-].copy()  # reduce batch effect between experiments
 ## Create new sample_type + cell_type and Filter according to cell type
 ad_sc.obs["sample_cell_type"] = (
     ad_sc.obs["harm_sample.type"].astype(str) + "-" + ad_sc.obs["cell_type"].astype(str)
@@ -98,13 +81,13 @@ ad_sc = ad_sc[
         .index
     )
 ].copy()
-
 cell_type_column = "sample_cell_type"
 
+print("Number of cells", ad_sc.shape[0])
+print("Number of genes", ad_sc.shape[1])
 print("Max count", ad_sc.X.max())
 print("Min count", ad_sc.X.min())
 print("Mean count", ad_sc.X.mean())
-print("Number of cells and genes", ad_sc.shape)
 
 ## Plot preprocessing figures
 if ad_sc.X.max() < 20:
@@ -113,10 +96,29 @@ plt.hist(ad_sc.X.sum(1), bins=100)  # Plot function changes scale
 plt.title("Total counts")
 plt.xlabel("Cells")
 plt.ylabel("Count")
-plt.show()
+plt.tight_layout()
+if run == "local":
+    plt.show()
+elif run == "cluster":
+    plt.gcf().savefig(
+        "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/sc_distribution.png",
+        bbox_inches="tight",
+    )
+    plt.close()
+
+ad_sc.var.index.name = "gene_ids_2"
+
+# Save filtered not normalised values
+if run == "local":
+    ad_sc.write("/home/agathes/work/Sc_data/Sc_cellxgene_filtered.h5ad")
+elif run == "cluster":
+    ad_sc.write(
+        "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/Sc_cellxgene_filtered.h5ad"
+    )
+
 
 ## Renormalise and log1p after filtering
-sc.pp.normalize_total(ad_sc, target_sum=20000)  # According to raw counts
+sc.pp.normalize_total(ad_sc, target_sum=30000)  # According to raw counts
 sc.pp.log1p(ad_sc)
 
 
@@ -135,19 +137,6 @@ def convert_genes_ensembles(gene_list):
         elif isinstance(ensembl, list) and len(ensembl) > 0:
             ensembl_list.append([gene["query"], ensembl[0]["gene"]])
     return np.array(ensembl_list)
-
-
-def convert_ensembl_to_genes(ensembl_list):
-    mg = mygene.MyGeneInfo()
-    gene_dict = mg.querymany(
-        ensembl_list, scopes="ensembl.gene", fields="symbol", species="human"
-    )
-    gene_list = []
-    for gene in gene_dict:
-        symbol = gene.get("symbol")
-        if symbol:
-            gene_list.append([gene["query"], symbol])
-    return np.array(gene_list)
 
 
 # Identify highly variable and marker genes
@@ -217,58 +206,44 @@ other_genes = [
     "DES",
 ]
 other_ensembl = list(convert_genes_ensembles(other_genes)[:, 1])
-# redundunt_genes = [
-#     "TGFB",
-#     "PDGFRA",
-#     "FGFR4",
-#     "ICAM1",
-#     "CD34",
-#     "LEPR",
-#     "COL1A1",
-#     "COL4A1",
-#     "CCL19",
-#     "CCL21",
-#     "CCL3",
-#     "CCL5",
-#     "VCAM1",
-#     "CCR5",
-#     "TNFSF13B",
-# ]
-markers = list(
-    set(markers + ligand_recept + sizek_ensembl + caf_genes + other_genes)
-)  # + add_genes
+markers = list(set(markers + ligand_recept + sizek_ensembl + caf_genes + other_genes))
 print("Number of selected markers :", len(markers))
 
 # Add marker column
-# ad_sc.var["Marker"] = ad_sc.var["feature_name"].isin(markers)
-# ad_sc.var["highly_variable"] = ad_sc.var["highly_variable"] | ad_sc.var["Marker"]
 ad_sc.var.loc[ad_sc.var.index.isin(markers), "Marker"] = True
 ad_sc.var["Marker"] = ad_sc.var["Marker"].fillna(False)
 ad_sc.var["highly_variable"] = ad_sc.var["Marker"]
 
 # Log data
-sc.pp.pca(ad_sc, svd_solver="arpack", n_comps=30, use_highly_variable=True)
+sc.pp.pca(ad_sc)
 sc.pp.neighbors(ad_sc)
 sc.tl.umap(ad_sc)
 
-# preprocessing plots
-fig, axs = plt.subplots(1, 1, figsize=(10, 10))
+# Umpa plot
+fig, axs = plt.subplots(1, 1, figsize=(12, 10))
 sc.pl.umap(
     ad_sc,
-    color=cell_type_column,
+    color="cell_type",
     size=15,
     frameon=False,
-    # show=False,
+    show=False,
     ax=axs,
-    # legend_loc="on data",
 )
+
 plt.tight_layout()
-plt.show()
+if run == "local":
+    plt.show()
+elif run == "cluster":
+    plt.gcf().savefig(
+        "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/sc_umap.png",
+        bbox_inches="tight",
+    )
+    plt.close()
 
 ## Write processed data
 if run == "local":
-    ad_sc.write("/home/agathes/work/Sc_data/Sc_cellxgene_processed_lung_batch.h5ad")
+    ad_sc.write("/home/agathes/work/Sc_data/Sc_cellxgene_normalised.h5ad")
 elif run == "cluster":
     ad_sc.write(
-        "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/Sc_cellxgene_processed_lung_batch.h5ad"
+        "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/Sc_cellxgene_normalised.h5ad"
     )
