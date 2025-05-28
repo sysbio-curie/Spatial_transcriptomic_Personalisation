@@ -29,7 +29,7 @@ cell2loc.models.RegressionModel.setup_anndata(
     adata=adata_ref,
     batch_key="donor_id",  # 10X reaction / sample / batch
     labels_key="sample_cell_type",  # sample-cell type, covariate used for constructing signatures
-    categorical_covariate_keys=[],
+    categorical_covariate_keys=[],  # ["assay","harm_study"]
 )
 
 # Create the regression model
