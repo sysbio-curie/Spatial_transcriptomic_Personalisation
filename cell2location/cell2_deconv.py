@@ -108,7 +108,7 @@ def st_processing(adata, slide):
     adata = adata[(~adata.obs["Cell outlier"])].copy()
 
     # Remove MT genes in ST data because it represents aretefacts in sc data
-    adata_vis.var["SYMBOL"] = adata_vis.var_names
+    adata.var["SYMBOL"] = adata.var_names
     adata.var["MT_gene"] = adata.var["SYMBOL"].str.upper().str.startswith("MT-")
     adata.obsm["MT"] = adata[
         :, adata.var["MT_gene"].values
