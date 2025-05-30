@@ -114,6 +114,7 @@ def st_processing(adata, slide):
         :, adata.var["MT_gene"].values
     ].X.toarray()  # Keep MT counts in obsm
     adata = adata[:, ~adata.var["MT_gene"].values]
+    sc.pp.calculate_qc_metrics(adata, inplace=True)
 
     # Normalising on a copy of data object as value can not be normalised for deconvolution
     adata_norm = adata.copy()
