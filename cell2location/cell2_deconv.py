@@ -232,9 +232,9 @@ print("Importing Regression model")
 
 adata_file = os.path.join(ref_results_dir, "sc_ref.h5ad")
 adata_ref = sc.read_h5ad(adata_file)
-mod = cell2loc.models.RegressionModel.load(
-    os.path.join(ref_results_dir, "reg_model"), adata_ref
-)
+# mod = cell2loc.models.RegressionModel.load(
+#     os.path.join(ref_results_dir, "reg_model"), adata_ref
+# )
 
 # Export estimated expression in each cluster
 if "means_per_cluster_mu_fg" in adata_ref.varm.keys():
@@ -352,6 +352,7 @@ with mpl.rc_context({"axes.facecolor": "black", "figure.figsize": [4.5, 5]}):
             "normal-T cell",
             "normal-epithelial cell",
             "normal-fibroblast",
+            "tumor-endothelial cell",
             "tumor-T cell",
             "tumor-epithelial cell",
             "tumor-fibroblast",
@@ -370,9 +371,9 @@ with mpl.rc_context({"axes.facecolor": "black", "figure.figsize": [4.5, 5]}):
 
 # up to 6 clusters
 clust_labels = [
-    "tumor-T cell",
-    "tumor-fibroblast",
     "tumor-malignant cell",
+    "tumor-fibroblast",
+    "tumor-T cell",
 ]
 clust_col = [
     "" + str(i) for i in clust_labels
