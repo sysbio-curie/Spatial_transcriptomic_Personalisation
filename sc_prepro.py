@@ -162,7 +162,6 @@ caf_genes = [
     "NOX4",
     "PDCD1",
     "CD274",
-    "MMP2",
     "CLDN5",
     "PECAM1",
     "TFF3",
@@ -183,7 +182,6 @@ caf_genes = [
     "ACTA2",
     "MMP2",
     "MYH11",
-    "ACTA2",
     "COL3A1",
     "BGN",
     "TCF21",
@@ -194,19 +192,7 @@ caf_genes = [
     "COL12A1",
 ]
 caf_ensembl = list(convert_genes_ensembles(caf_genes)[:, 1])
-other_genes = [
-    "PDCD1",
-    "CD274",
-    "CLDN5",
-    "PECAM1",
-    "TFF3",
-    "PROX1",
-    "MCAM",
-    "COX4I2",
-    "DES",
-]
-other_ensembl = list(convert_genes_ensembles(other_genes)[:, 1])
-markers = list(set(markers + ligand_recept + sizek_ensembl + caf_genes + other_genes))
+markers = list(set(markers + ligand_recept + sizek_ensembl + caf_genes))
 print("Number of selected markers :", len(markers))
 
 # Add marker column
