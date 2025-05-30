@@ -8,9 +8,9 @@ import os
 import glob
 import openslide
 
-from image_alignement import *
+from image_alignment import *
 
-use = "cluster"
+use = "local"
 
 ## Read spatial transcripotmic data and the two image data files
 if use == "cluster":
@@ -37,6 +37,16 @@ elif use == "local":
 adata_sp.var["feature_name"] = adata_sp.var_names
 adata_sp.var.rename(columns={"gene_ids": "ensembl_id"}, inplace=True)
 adata_sp.var.set_index("ensembl_id", drop=True, inplace=True)
+
+## Filter cells and genes
+sc.pp.filter_cells(adata_sp, min_counts=100)
+sc.pp.filter_genes(adata_sp, min_cells=3)
+#  Remove MT genes in ST data because it represents aretefacts in sc data
+adata_sp.var["MT_gene"] = adata_sp.var["feature_name"].str.upper().str.startswith("MT-")
+adata_sp.obsm["MT"] = adata_sp[
+    :, adata_sp.var["MT_gene"].values
+].X.toarray()  # Keep MT counts in obsm
+adata_sp = adata_sp[:, ~adata_sp.var["MT_gene"].values]
 
 
 def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int = 1):
@@ -85,14 +95,7 @@ def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int 
     # Add custom high resolution image corresponding to new spatial coordinates
     slide_id = list(adata_sp.uns["spatial"].keys())[0]
     adata_sp.uns["spatial"][slide_id]["images"]["custom"] = np.array(region_rgb)
-
-    max_x, max_y = np.max(adata_sp.obsm["spatial"], axis=0)
-    x_scale = w / max_x
-    y_scale = h / max_y
-    scale_factor = (x_scale + y_scale) / 2
-    adata_sp.uns["spatial"][slide_id]["scalefactors"][
-        "tissue_custom_scalef"
-    ] = 1  # scale_factor
+    adata_sp.uns["spatial"][slide_id]["scalefactors"]["tissue_custom_scalef"] = 1
 
     return adata_sp, region_rgb
 

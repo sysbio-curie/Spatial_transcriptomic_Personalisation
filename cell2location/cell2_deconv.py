@@ -1,4 +1,5 @@
-# Trainning Cell2location model for lusc v2 deconvolution with cell2ocation - cluster implementation
+# Trainning Cell2location model for deconvolution with cell2ocation - cluster implementation
+# Include ST preprocessing and training of the deconvolution model
 # started 02/04/2025 author: Agathe Sobkowicz
 # st : spatial transcriptomics, sc: single-cell
 
@@ -13,7 +14,10 @@ import warnings
 import celltypist as ct
 import argparse
 
-# Create an argument parser
+use = "cluster"
+
+## Define paths to data, models an results
+# Argument parser for slide value
 parser = argparse.ArgumentParser(description="Process a parameter from SLURM.")
 parser.add_argument(
     "--param", type=str, required=True, help="Parameter from SLURM job array"
@@ -22,37 +26,47 @@ args = parser.parse_args()
 slide = args.param
 print(f"Running script on slide: {slide}")
 
-# Define paths to data, models an results
-current_dir = os.getcwd()
-vis_data_dir = os.path.join(current_dir, "data/LUSC_v2")
+# ST dir
+vis_data_dir = "/mnt/beegfs/home/asobkow1/persistent/data/LUSC_v2"
 vis_slide_dir = os.path.join(vis_data_dir, slide)
 
-results_dir = os.path.join(current_dir, "results")
+# Results dir
+results_dir = "/mnt/beegfs/home/asobkow1/persistent/cell2loc/results"
 os.makedirs(results_dir, exist_ok=True)
 
+# Sc Cell type reference results dir
 ref_results_dir = os.path.join(results_dir, "reference_signatures")
 os.makedirs(ref_results_dir, exist_ok=True)
 
+# Per slide results dir
 slide_results_dir = os.path.join(results_dir, slide)
 os.makedirs(slide_results_dir, exist_ok=True)
 
+# Spatial preprocessing per slide results dir
 st_prepro_results_dir = os.path.join(slide_results_dir, "spatial_preprocessing")
 os.makedirs(st_prepro_results_dir, exist_ok=True)
 
+# Deconvoltuion per slide results dir
 map_results_dir = os.path.join(slide_results_dir, "cell2location_map")
 os.makedirs(map_results_dir, exist_ok=True)
 
+# Nuclei segmentation results dir
+nuc_segm_dir = (
+    "/mnt/beegfs/home/asobkow1/persistent/spatialscope/results/deconv_normalised"
+)
+nuc_segm_dir = os.path.join(nuc_segm_dir, slide, "sp_adata_ns.h5ad")
+sp_nuc_adata = sc.read_h5ad(nuc_segm_dir)
+N_cells_spot_nuc_seg = round(sp_nuc_adata.obs["cell_count"].mean())
+
 
 ## Preprocessing functions
-def tot_filter_genes(adata, min_counts=200, pct_min_cells=0.05):
+def tot_filter_genes(adata, min_cells=3):
     """All filters applied on genes of st data"""
-    adata.var["Gene outlier"] = (
-        ~sc.pp.filter_genes(adata, min_counts=min_counts, inplace=False)[0]
-        | ~sc.pp.filter_genes(
-            adata, min_cells=int(pct_min_cells * adata.n_obs), inplace=False
-        )[0]
-    )  # remove genes expressed weakly or in less than 5% of cells
-    # returns tuple, first element is a True False array where
+    adata.var["Gene outlier"] = ~sc.pp.filter_genes(
+        adata, min_cells=min_cells, inplace=False
+    )[0]
+    # Remove genes expressed in less than 3 cells
+    # Returns tuple, first element is a True False array where
     # True are spots above min count to keep,
     # INVERSED array so that True is an outlier
 
@@ -61,7 +75,7 @@ def tot_filter_genes(adata, min_counts=200, pct_min_cells=0.05):
     return adata
 
 
-def tot_filter_cells(adata, min_counts=200):
+def tot_filter_cells(adata, min_counts=100):
     """All filters applied on cells of st data"""
     adata.obs["Cell outlier"] = ~sc.pp.filter_cells(
         adata, min_counts=min_counts, inplace=False
@@ -74,12 +88,6 @@ def tot_filter_cells(adata, min_counts=200):
 
 def st_processing(adata, slide):
     """Preprocessing steps: QC netrics, filter, normalise, dimension reduction and cluster"""
-
-    adata.var["mt"] = [gene.startswith("MT-") for gene in adata.var_names]
-    sc.pp.calculate_qc_metrics(adata, qc_vars=["mt"], inplace=True, percent_top=[20])
-    adata.obs["mt_frac"] = (
-        adata[:, adata.var["mt"]].X.sum(1).A.squeeze() / adata.obs["total_counts"]
-    )
 
     # Filter
     adata = tot_filter_genes(adata)
@@ -99,9 +107,17 @@ def st_processing(adata, slide):
     plt.close()
     adata = adata[(~adata.obs["Cell outlier"])].copy()
 
+    # Remove MT genes in ST data because it represents aretefacts in sc data
+    adata_vis.var["SYMBOL"] = adata_vis.var_names
+    adata.var["MT_gene"] = adata.var["SYMBOL"].str.upper().str.startswith("MT-")
+    adata.obsm["MT"] = adata[
+        :, adata.var["MT_gene"].values
+    ].X.toarray()  # Keep MT counts in obsm
+    adata = adata[:, ~adata.var["MT_gene"].values]
+
     # Normalising on a copy of data object as value can not be normalised for deconvolution
     adata_norm = adata.copy()
-    sc.pp.normalize_total(adata_norm, inplace=True)  # Shifted algorithm
+    sc.pp.normalize_total(adata_norm)  # Shifted algorithm
     sc.pp.log1p(adata_norm)  # log1p transform
 
     # Dimesion reduction
@@ -240,7 +256,6 @@ adata_vis = sc.read_visium(vis_slide_dir)
 # Add column to obs with sample name
 adata_vis.obs["sample"] = list(adata_vis.uns["spatial"].keys())[0]
 # For deconvolution gene/var names are replaced by ENSEMBL ID to match sc data
-adata_vis.var["SYMBOL"] = adata_vis.var_names
 adata_vis.var_names_make_unique()
 if adata_vis.obsm["spatial"].dtype == "object":
     adata_vis.obsm["spatial"] = np.array(adata_vis.obsm["spatial"], dtype=float)
@@ -251,13 +266,6 @@ adata_vis = st_processing(adata_vis, slide)
 # Rename genes to ENSEMBL ID for matching between single cell and spatial data
 adata_vis.var.set_index("gene_ids", drop=True, inplace=True)
 
-# Remove MT genes in ST data because it represents aretefacts in sc data
-adata_vis.var["MT_gene"] = [gene.startswith("MT-") for gene in adata_vis.var["SYMBOL"]]
-adata_vis.obsm["MT"] = adata_vis[
-    :, adata_vis.var["MT_gene"].values
-].X.toarray()  # Keep MT counts in obsm
-adata_vis = adata_vis[:, ~adata_vis.var["MT_gene"].values]
-
 # Find shared genes and subset both anndata and reference signatures
 intersect = np.intersect1d(adata_vis.var_names, inf_aver.index)
 adata_vis = adata_vis[:, intersect].copy()
@@ -267,15 +275,19 @@ inf_aver_slide = inf_aver.loc[intersect, :].copy()
 cell2loc.models.Cell2location.setup_anndata(adata=adata_vis, batch_key="sample")
 
 # create and train the model
+print(
+    "N_cells_per_location sued according to nuclei segmentation : ",
+    N_cells_spot_nuc_seg,
+)
 Cell2locMod = cell2loc.models.Cell2location(
     adata_vis,
     cell_state_df=inf_aver_slide,
     # the expected average cell abundance: tissue-dependent
     # hyper-prior which can be estimated from paired histology:
-    N_cells_per_location=30,
+    N_cells_per_location=N_cells_spot_nuc_seg,
     # hyperparameter controlling normalisation of
     # within-experiment variation in RNA detection:
-    detection_alpha=20,
+    detection_alpha=200,
 )
 Cell2locMod.view_anndata_setup()
 
@@ -358,8 +370,6 @@ with mpl.rc_context({"axes.facecolor": "black", "figure.figsize": [4.5, 5]}):
 
 # up to 6 clusters
 clust_labels = [
-    "normal-T cell",
-    "normal-fibroblast",
     "tumor-T cell",
     "tumor-fibroblast",
     "tumor-malignant cell",
@@ -380,10 +390,28 @@ with mpl.rc_context({"figure.figsize": (15, 15)}):
         # limit color scale at 99.2% quantile of cell abundance
         max_color_quantile=0.992,
         # size of locations (adjust depending on figure size)
-        circle_diameter=6,
+        circle_diameter=8,
         colorbar_position="right",
     )
     plt.gcf().savefig(
-        os.path.join(map_results_dir, f"cell_abundance_multiple_{slide}.png")
+        os.path.join(map_results_dir, f"cell_abundance_white_{slide}.png")
     )
+    plt.close()
+
+with mpl.rc_context({"figure.figsize": (15, 15)}):
+    fig = cell2loc.plt.plot_spatial(
+        adata=adata_vis,
+        # labels to show on a plot
+        color=clust_col,
+        labels=clust_labels,
+        show_img=True,
+        # 'fast' (white background) or 'dark_background'
+        style="dark_background",
+        # limit color scale at 99.2% quantile of cell abundance
+        max_color_quantile=0.992,
+        # size of locations (adjust depending on figure size)
+        circle_diameter=8,
+        colorbar_position="right",
+    )
+    plt.gcf().savefig(os.path.join(map_results_dir, f"cell_abundance_dark_{slide}.png"))
     plt.close()
