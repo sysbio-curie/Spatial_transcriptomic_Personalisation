@@ -10,7 +10,7 @@ import openslide
 
 from image_alignment import *
 
-use = "local"
+use = "cluster"
 
 ## Read spatial transcripotmic data and the two image data files
 if use == "cluster":
@@ -20,6 +20,12 @@ if use == "cluster":
         type=str,
         help="Path to spatial and image data of one slide",
         default=None,
+    )
+    parser.add_argument(
+        "--Analysis_level",
+        type=int,
+        help="Resolution level of the image",
+        default=1,
     )
     args = parser.parse_args()
 
@@ -49,7 +55,7 @@ adata_sp.obsm["MT"] = adata_sp[
 adata_sp = adata_sp[:, ~adata_sp.var["MT_gene"].values]
 
 
-def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int = 1):
+def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level):
     ## Align ndpi and tiff images
     # Get coresponding transformation matrix and
     # coordinate to crop ndpi image at different levels to get tiff image
@@ -100,7 +106,10 @@ def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level: int 
     return adata_sp, region_rgb
 
 
-adata_sp, region_rgb = correspondance_sp_image(adata_sp, ndpi_file, tiff_file)
+analysis_level = args.Analysis_level
+adata_sp, region_rgb = correspondance_sp_image(
+    adata_sp, ndpi_file, tiff_file, analysis_level
+)
 # adata_sp = correspondance_sp_image(adata_sp, ndpi_file, tiff_file)
 
 ## Save preprocessed image and spatial transcriptomic data
