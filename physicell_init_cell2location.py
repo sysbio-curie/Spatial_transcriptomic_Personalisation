@@ -1,4 +1,4 @@
-# Transform deconvolution results to PhysiCell initilisation
+# Transform Celloc deconvolution results to PhysiCell initilisation
 # started 09/04/2025 author: Agathe Sobkowicz
 
 # Import
@@ -11,25 +11,33 @@ import anndata as ad
 
 
 ## Define paths to deconvolution results
-current_dir = os.getcwd()
-parent_dir = os.path.dirname(current_dir)
-results_dir = os.path.join(parent_dir, "results")
-ref_results_dir = os.path.join(
-    results_dir, "Correct_reg_cluster_deconv_results/results"
+results_dir = "/home/agathes/work/results"
+deconv_results_dir = os.path.join(
+    results_dir,
+    "Cell2loc_deconv/Sencond_run_changed_filter_sc_sp",
 )
 slides = [
-    slide for slide in os.listdir(ref_results_dir) if slide != "reference_signatures"
+    "17P02529",
+    "18P06762",
+    "18P08140",
+    "17P04394",
+    "18P06593",
+    "18P03122",
+    "18P02831",
 ]
-model_init_results = os.path.join(results_dir, "model_init")
-os.makedirs(model_init_results, exist_ok=True)
-
+model_init_results_dir = os.path.join(
+    results_dir, "model_initialisation/second_run/cell2loc_deconv"
+)
+os.makedirs(model_init_results_dir, exist_ok=True)
 
 ## Import data
 for slide in slides:
-    slide_dir = os.path.join(ref_results_dir, slide)
-    adata_map = sc.read_h5ad(os.path.join(slide_dir, "cell2location_map/st_map.h5ad"))
+    slide_deconv_dir = os.path.join(deconv_results_dir, slide)
+    adata_map = sc.read_h5ad(
+        os.path.join(slide_deconv_dir, "cell2location_map/st_map.h5ad")
+    )
 
-    slide_model_init_results = os.path.join(model_init_results, slide)
+    slide_model_init_results = os.path.join(model_init_results_dir, slide)
     os.makedirs(slide_model_init_results, exist_ok=True)
 
     ## Extract coordinates and dominant cell type of each spot
