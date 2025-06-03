@@ -1,14 +1,9 @@
-# Transform Celloc deconvolution results to PhysiCell initilisation
-# started 09/04/2025 author: Agathe Sobkowicz
+# Transform Spatialscope deconvolution results to PhysiCell initilisation
+# started 03/06/2025 author: Agathe Sobkowicz
 
 # Import
 import os
 import scanpy as sc
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import anndata as ad
-from spatialscope.src_custom_image.utils import *
 
 
 ## Define paths to deconvolution results
@@ -40,10 +35,4 @@ for slide in slides:
     os.makedirs(slide_model_init, exist_ok=True)
     cell_sp_data.to_csv(
         os.path.join(slide_model_init, f"cell_init_spatialscope_{slide}.csv")
-    )
-
-    fig, ax = plt.subplots(1, 1, figsize=(12, 8), dpi=100)
-    fig.patch.set_alpha(0.1)
-    PlotVisiumCells(
-        sp_adata, "discrete_label_ct", size=1.5, alpha_img=0.4, lw=0.3, ax=ax
     )
