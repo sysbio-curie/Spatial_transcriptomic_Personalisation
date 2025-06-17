@@ -1,4 +1,4 @@
-# Trainning Cell2location model for deconvolution with cell2ocation - cluster implementation
+# Trainning Cell2location model for deconvolution
 # Include ST preprocessing and training of the deconvolution model
 # started 02/04/2025 author: Agathe Sobkowicz
 # st : spatial transcriptomics, sc: single-cell

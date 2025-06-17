@@ -1,4 +1,4 @@
-# Trainning Regression model for lusc v2 deconvolution with cell2ocation - cluster implementation
+# Trainning Regression model for deconvolution with cell2ocation
 # started 02/04/2025 author: Agathe Sobkowicz
 # st : spatial transcriptomics, sc: single-cell
 
