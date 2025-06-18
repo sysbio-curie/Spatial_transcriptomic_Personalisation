@@ -12,21 +12,16 @@ The MSMs were personalised using spatial transcriptomic (ST) data from LUSC samp
 
 ## Key Components
 
-    Multiscale Modelling (MSM): Built using the PhysiBoSS framework, integrating:
+Multiscale Modelling (MSM): Built using the PhysiBoSS framework, integrating:
+- Agent-based modelling with PhysiCell
+- Boolean modelling with MaBoSS
 
-        Agent-based modelling with PhysiCell
+Spatial Transcriptomic Data:
+- Visium v2 data from NSCLC patient samples (not avaialable on GitHub)
+- Deconvolution using Cell2location and SpatialScope
 
-        Boolean modelling with MaBoSS
-
-    Spatial Transcriptomic Data:
-
-        Visium v2 data from NSCLC patient samples (not avaialable on GitHub)
-
-        Deconvolution using Cell2location and SpatialScope
-
-    Model Personalisation Pipeline:
-
-        Cell localisation and annotation via BioInformatics WalkThrough (BIWT)
+Model Personalisation Pipeline:
+- Cell localisation and annotation via BioInformatics WalkThrough (BIWT)
 
 ## Repository Structure
 
@@ -35,41 +30,31 @@ The MSMs were personalised using spatial transcriptomic (ST) data from LUSC samp
 
 To reproduce or run the personalised simulations:
 
-    Set up the environment:
-    Use the provided Apptainer/Singularity definition files to ensure reproducibility across systems.
+Set up the environment:
+Use the provided Apptainer/Singularity definition files to ensure reproducibility across systems.
 
-    Preprocess ST and scRNAseq data:
+Preprocess ST and scRNAseq data and Run deconvolution
 
-        Run deconvolution
+Personalise the model:
+Initialise agent-based models with inferred cell types and spatial locations
 
-    Personalise the model:
-
-        Initialise agent-based models with inferred cell types and spatial locations
-
-    Run simulations:
-
-        Launch PhysiBoSS simulations from the model configurations
+Run simulations:
+Launch PhysiBoSS simulations from the model configurations
 
 ## Results Summary
 
-    Cell2location and SpatialScope deconvolutions matched known histological structures, validated against immunohistochemistry (IHC).
-
-    Personalised MSMs reproduced distinct tumour architectures and immune exclusion phenotypes.
-
-    Simulations explored how CAF-derived ECM can mechanically hinder T cell infiltration.
+Cell2location and SpatialScope deconvolutions matched known histological structures, validated against immunohistochemistry (IHC).
+Personalised MSMs reproduced distinct tumour architectures and immune exclusion phenotypes.
+Simulations explored how CAF-derived ECM can mechanically hinder T cell infiltration.
 
 ## References
 
 Key references include:
-
-    Grout et al., Cancer Discovery 2022 – CAF states in NSCLC
-
-    Sizek et al., Cell Cycle Model 2019 – Boolean modelling
-
-    Sobkowicz A., Internship Report 2025
+- Grout et al., Cancer Discovery 2022 – CAF states in NSCLC
+- Sizek et al., Cell Cycle Model 2019 – Boolean modelling
+- Sobkowicz A., Internship Report 2025
 
 ## Contact and Contributions
 
 This work was developed by Agathe Sobkowicz during her Master’s internship at Institut Curie, under the supervision of Dr. Vincent Noël, Dr. Laurence Calzone, and Pr. Emmanuel Barillot.
-
 Please open an issue or submit a pull request if you wish to contribute or have questions.
