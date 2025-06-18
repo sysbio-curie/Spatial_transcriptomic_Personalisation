@@ -1,16 +1,16 @@
-### Spatial Transcriptomic Personalisation
+# Spatial Transcriptomic Personalisation
 
 Personalising Multiscale Models with Spatial Transcriptomics to Investigate T Cell Exclusion Mediated by Cancer-Associated Fibroblasts in Non-Small Cell Lung Cancer
 
 This repository contains code and resources developed during a research project at Institut Curie that aimed to personalise multiscale models (MSMs) of tumour-immune interactions using spatial transcriptomic data. The focus was on understanding mechanisms of T cell exclusion mediated by cancer-associated fibroblasts (CAFs) in non-small cell lung cancer (NSCLC), particularly lung squamous cell carcinoma (LUSC).
 
-# Project Overview
+## Project Overview
 
 Spatial organisation within the tumour microenvironment (TME) significantly influences immune cell infiltration. CAFs are known to form barriers around tumour nests, excluding T cells and contributing to resistance to immunotherapy. This project explored CAF-mediated T cell exclusion using in silico multiscale simulations combining agent-based and Boolean intracellular models.
 
 The MSMs were personalised using spatial transcriptomic (ST) data from LUSC samples, deconvoluted to infer cell types and gene expression at single-cell resolution.
 
-# Key Components
+## Key Components
 
     Multiscale Modelling (MSM): Built using the PhysiBoSS framework, integrating:
 
@@ -28,10 +28,10 @@ The MSMs were personalised using spatial transcriptomic (ST) data from LUSC samp
 
         Cell localisation and annotation via BioInformatics WalkThrough (BIWT)
 
-# Repository Structure
+## Repository Structure
 
 
-# Getting Started
+## Getting Started
 
 To reproduce or run the personalised simulations:
 
@@ -50,7 +50,7 @@ To reproduce or run the personalised simulations:
 
         Launch PhysiBoSS simulations from the model configurations
 
-# Results Summary
+## Results Summary
 
     Cell2location and SpatialScope deconvolutions matched known histological structures, validated against immunohistochemistry (IHC).
 
@@ -58,7 +58,7 @@ To reproduce or run the personalised simulations:
 
     Simulations explored how CAF-derived ECM can mechanically hinder T cell infiltration.
 
-# References
+## References
 
 Key references include:
 
@@ -68,7 +68,7 @@ Key references include:
 
     Sobkowicz A., Internship Report 2025
 
-# Contact and Contributions
+## Contact and Contributions
 
 This work was developed by Agathe Sobkowicz during her Master’s internship at Institut Curie, under the supervision of Dr. Vincent Noël, Dr. Laurence Calzone, and Pr. Emmanuel Barillot.
 
