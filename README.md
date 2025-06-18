@@ -52,6 +52,9 @@ Simulations explored how CAF-derived ECM can mechanically hinder T cell infiltra
 Key references include:
 - Grout et al., Cancer Discovery 2022 – CAF states in NSCLC
 - Sizek et al., Cell Cycle Model 2019 – Boolean modelling
+- Kleshchevnikov et al., Nature Biotechnology 2022 - Cell2location
+- Weigert et al., IEEE Xplore 2022 - StarDist
+- Wan et al., Nature Communication 2023 - SpatialScope
 - Sobkowicz A., Internship Report 2025
 
 ## Contact and Contributions
