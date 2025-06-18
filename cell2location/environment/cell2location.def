@@ -1,0 +1,15 @@
+bootstrap: docker
+from: tensorflow/tensorflow:latest-gpu
+
+%post
+apt-get update && apt-get install -y git
+pip3 install ipykernel
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+pip3 install scvi-tools==1.1.2
+
+pip install git+https://github.com/BayraktarLab/cell2location.git#egg=cell2location[tutorials,dev]
+python -m ipykernel install --user --name=cell2location_cuda118_torch22 --display-name='Environment (cell2location_cuda118_torch22)'
+
+pip install celltypist
+
