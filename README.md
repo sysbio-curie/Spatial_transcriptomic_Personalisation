@@ -25,6 +25,12 @@ Model Personalisation Pipeline:
 
 ## Repository Structure
 
+1. data_analysis: Scripts for exploratory analysis and preprocessing of spatial and single-cell transcriptomic data.
+2. cell2location: Scripts to create the environment, run Cell2location, and analyze the results.
+3. spatialscope: Scripts to create the environment, run SpatialScope, and analyze the results.
+4. models: Aberrant cell cycle Boolean model from Sizel et al., 2019.
+5. personalisation: Deconvolution results transformed into initial conditions for the agent-based model, including initial cell populations derived using the transformed results and implemented with PhysiCell and the Bioinformatic WalkThrough tool.
+
 
 ## Getting Started
 
