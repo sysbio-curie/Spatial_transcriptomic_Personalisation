@@ -9,29 +9,31 @@ import scanpy as sc
 import mygene
 
 import matplotlib.pyplot as plt
+import anndata
 
-run = "local"
+anndata.settings.allow_write_nullable_strings = True
+# run = "local"
 
 ## Read data
-if run == "local":
-    ad_sc = sc.read("/home/agathes/work/Sc_data/Sc_cellxgene.h5ad")
-    ligand_recept = pd.read_csv(
-        "/home/agathes/work/SpatialScope/extdata/ligand_receptors.txt", sep="\t"
-    )
-    sizek_df = pd.read_csv(
-        "/home/agathes/work/PhysiBoSS_Personalisation/models/sizek_dictionary.csv"
-    )
-elif run == "cluster":
-    ad_sc = sc.read(
-        "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/Sc_cellxgene.h5ad"
-    )
-    ligand_recept = pd.read_csv(
-        "/mnt/beegfs/home/asobkow1/persistent/spatialscope/SpatialScope/extdata/ligand_receptors.txt",
-        sep="\t",
-    )
-    sizek_df = pd.read_csv(
-        "/mnt/beegfs/home/asobkow1/persistent/data/models/sizek_dictionary.csv"
-    )
+# if run == "local":
+ad_sc = sc.read("../Sc_data/Sc_cellxgene.h5ad")
+ligand_recept = pd.read_csv(
+    "../../SpatialScope/extdata/ligand_receptors.txt", sep="\t"
+)
+sizek_df = pd.read_csv(
+    "../../PhysiBoSS_Personalisation/models/sizek_dictionary.csv"
+)
+# elif run == "cluster":
+#     ad_sc = sc.read(
+#         "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/Sc_cellxgene.h5ad"
+#     )
+#     ligand_recept = pd.read_csv(
+#         "/mnt/beegfs/home/asobkow1/persistent/spatialscope/SpatialScope/extdata/ligand_receptors.txt",
+#         sep="\t",
+#     )
+#     sizek_df = pd.read_csv(
+#         "/mnt/beegfs/home/asobkow1/persistent/data/models/sizek_dictionary.csv"
+#     )
 
 ## Restore raw data keeping normalised data in a "normal" layer
 ad_sc.layers["normalized"] = ad_sc.X.copy()
@@ -97,24 +99,24 @@ plt.title("Total counts")
 plt.xlabel("Cells")
 plt.ylabel("Count")
 plt.tight_layout()
-if run == "local":
-    plt.show()
-elif run == "cluster":
-    plt.gcf().savefig(
-        "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/sc_distribution.png",
-        bbox_inches="tight",
-    )
-    plt.close()
+# if run == "local":
+    # plt.show()
+# elif run == "cluster":
+plt.gcf().savefig(
+    "../Sc_data/sc_distribution.png",
+    bbox_inches="tight",
+)
+plt.close()
 
 ad_sc.var.index.name = "gene_ids_2"
 
 # Save filtered not normalised values
-if run == "local":
-    ad_sc.write("/home/agathes/work/Sc_data/Sc_cellxgene_filtered.h5ad")
-elif run == "cluster":
-    ad_sc.write(
-        "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/Sc_cellxgene_filtered.h5ad"
-    )
+# if run == "local":
+#     ad_sc.write("../Sc_data/Sc_cellxgene_filtered.h5ad")
+# elif run == "cluster":
+ad_sc.write(
+    "../Sc_data/Sc_cellxgene_filtered.h5ad"
+)
 
 
 ## Renormalise and log1p after filtering
@@ -199,6 +201,9 @@ print("Number of selected markers :", len(markers))
 ad_sc.var.loc[ad_sc.var.index.isin(markers), "Marker"] = True
 ad_sc.var["Marker"] = ad_sc.var["Marker"].fillna(False)
 ad_sc.var["highly_variable"] = ad_sc.var["Marker"]
+ad_sc.var["Marker"] = ad_sc.var["Marker"].astype("bool")
+ad_sc.var["highly_variable"] = ad_sc.var["highly_variable"].astype("bool")
+
 
 # Log data
 sc.pp.pca(ad_sc)
@@ -217,19 +222,21 @@ sc.pl.umap(
 )
 
 plt.tight_layout()
-if run == "local":
-    plt.show()
-elif run == "cluster":
-    plt.gcf().savefig(
-        "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/sc_umap.png",
-        bbox_inches="tight",
-    )
-    plt.close()
+# if run == "local":
+#     plt.show()
+# elif run == "cluster":
+plt.gcf().savefig(
+    "../Sc_data/sc_umap.png",
+    bbox_inches="tight",
+)
+plt.close()
+
+
 
 ## Write processed data
-if run == "local":
-    ad_sc.write("/home/agathes/work/Sc_data/Sc_cellxgene_normalised.h5ad")
-elif run == "cluster":
-    ad_sc.write(
-        "/mnt/beegfs/home/asobkow1/persistent/data/Sc_data/Sc_cellxgene_normalised.h5ad"
-    )
+# if run == "local":
+#     ad_sc.write("../Sc_data/Sc_cellxgene_normalised.h5ad")
+# elif run == "cluster":
+ad_sc.write(
+    "../Sc_data/Sc_cellxgene_normalised.h5ad"
+)
