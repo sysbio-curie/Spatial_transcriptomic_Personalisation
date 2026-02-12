@@ -28,6 +28,7 @@ dependencies:
   - request >= 2.83.1
   - cython >= 0.29.17
   - celltypist >= 1.7.1
+  - mygene >= 3.2.2
   - pip:
       - pyro-ppl>=1.7.0
       - scvi-tools>=0.15.3
