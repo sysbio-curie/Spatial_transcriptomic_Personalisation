@@ -6,22 +6,16 @@ from: tensorflow/tensorflow:latest-gpu
     
 %post
     apt-get update && apt-get install -y git wget && rm -rf /var/lib/apt/lists/*
-
-    wget \
-        https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh \
-        && bash Miniforge3-$(uname)-$(uname -m).sh -b -p /root/miniconda3 \
-        && rm -f Miniforge3-$(uname)-$(uname -m).sh 
-    
-    # Add conda to path
-    export PATH="/root/miniconda3/bin:$PATH"
-    
-    # Initialize conda for bash
-    conda init bash
-    
-    mamba --version
-
-    mamba env create -f /root/cell2loc_env.yml
-
+   
+    curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -C /usr/local -xvj bin/micromamba
+    export MAMBA_ROOT_PREFIX=/usr/local/micromamba  # optional, defaults to ~/micromamba
+    export MAMBA_EXE='/usr/local/bin/micromamba'
+    eval "$(/usr/local/bin/micromamba shell hook -s posix)"
+    /usr/local/bin/micromamba shell init -s bash -r /usr/local/micromamba  # this writes to your .bashrc file
+    /usr/local/bin/micromamba shell hook --shell bash --root-prefix "$MAMBA_ROOT_PREFIX"
+    micromamba install -n base --file /root/cell2loc_env.yml 
+    micromamba clean --all --yes 
+    which python
     #pip3 install ipykernel
     #pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
@@ -34,4 +28,9 @@ from: tensorflow/tensorflow:latest-gpu
 
 %environment
     # Ensure conda is in the PATH at runtime
-    export PATH="/opt/conda/bin:$PATH"
+    export PATH="/usr/local/miniconda3/bin:$PATH"
+    export MAMBA_ROOT_PREFIX=/usr/local/micromamba  # optional, defaults to ~/micromamba
+    export MAMBA_EXE='/usr/local/bin/micromamba'
+    
+%runscript 
+    micromamba run -n base python $@

@@ -13,15 +13,31 @@ import anndata
 
 anndata.settings.allow_write_nullable_strings = True
 # run = "local"
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--data", help="Single cell RNAseq data file", type=str)
+parser.add_argument("--ligand", help="Ligand-receptor data file", type=str)
+parser.add_argument("--dictionnary", help="Node-Gene Dictionary file", type=str)
+parser.add_argument("--figures_folder", help="Folder to save figures", type=str)
+args = parser.parse_args()
 
 ## Read data
+
+# ad_sc = sc.read("Sc_data/Sc_cellxgene.h5ad")
+# ligand_recept = pd.read_csv(
+#     "../../SpatialScope/extdata/ligand_receptors.txt", sep="\t"
+# )
+# sizek_df = pd.read_csv(
+#     "../../PhysiBoSS_Personalisation/models/sizek_dictionary.csv"
+# )
 # if run == "local":
-ad_sc = sc.read("../Sc_data/Sc_cellxgene.h5ad")
+ad_sc = sc.read(args.data)
 ligand_recept = pd.read_csv(
-    "../../SpatialScope/extdata/ligand_receptors.txt", sep="\t"
+    args.ligand, sep="\t"
 )
 sizek_df = pd.read_csv(
-    "../../PhysiBoSS_Personalisation/models/sizek_dictionary.csv"
+    args.dictionnary
 )
 # elif run == "cluster":
 #     ad_sc = sc.read(
@@ -103,7 +119,7 @@ plt.tight_layout()
     # plt.show()
 # elif run == "cluster":
 plt.gcf().savefig(
-    "../Sc_data/sc_distribution.png",
+    f"{args.figures_folder}/sc_distribution.png",
     bbox_inches="tight",
 )
 plt.close()
@@ -112,10 +128,11 @@ ad_sc.var.index.name = "gene_ids_2"
 
 # Save filtered not normalised values
 # if run == "local":
-#     ad_sc.write("../Sc_data/Sc_cellxgene_filtered.h5ad")
+#     ad_sc.write("Sc_data/Sc_cellxgene_filtered.h5ad")
 # elif run == "cluster":
 ad_sc.write(
-    "../Sc_data/Sc_cellxgene_filtered.h5ad"
+    args.data.replace(".h5ad", "_filtered.h5ad")
+    # "Sc_data/Sc_cellxgene_filtered.h5ad"
 )
 
 
@@ -226,7 +243,7 @@ plt.tight_layout()
 #     plt.show()
 # elif run == "cluster":
 plt.gcf().savefig(
-    "../Sc_data/sc_umap.png",
+    f"{args.figures_folder}/sc_umap.png",
     bbox_inches="tight",
 )
 plt.close()
@@ -235,8 +252,8 @@ plt.close()
 
 ## Write processed data
 # if run == "local":
-#     ad_sc.write("../Sc_data/Sc_cellxgene_normalised.h5ad")
+#     ad_sc.write("Sc_data/Sc_cellxgene_normalised.h5ad")
 # elif run == "cluster":
 ad_sc.write(
-    "../Sc_data/Sc_cellxgene_normalised.h5ad"
+    args.data.replace(".h5ad", "_normalised.h5ad")
 )
