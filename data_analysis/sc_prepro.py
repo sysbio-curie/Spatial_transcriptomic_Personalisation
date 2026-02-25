@@ -136,10 +136,6 @@ ad_sc.write(
 )
 
 
-## Renormalise and log1p after filtering
-sc.pp.normalize_total(ad_sc, target_sum=30000)  # According to raw counts
-sc.pp.log1p(ad_sc)
-
 
 ## Define a class of marker genes with higly variable, cell type markers,
 ## ligand recepter genes, model nodes and CAF marker genes
@@ -161,6 +157,13 @@ def convert_genes_ensembles(gene_list):
 # Identify highly variable and marker genes
 ad_sc.raw = ad_sc.copy()
 sc.pp.highly_variable_genes(ad_sc, flavor="seurat_v3", n_top_genes=1000)
+
+
+## Renormalise and log1p after filtering
+sc.pp.normalize_total(ad_sc, target_sum=30000)  # According to raw counts
+sc.pp.log1p(ad_sc)
+
+
 sc.tl.rank_genes_groups(ad_sc, groupby=cell_type_column, method="wilcoxon")
 markers_df = pd.DataFrame(ad_sc.uns["rank_genes_groups"]["names"]).iloc[0:100, :]
 markers = list(np.unique(markers_df.melt().value.values))
