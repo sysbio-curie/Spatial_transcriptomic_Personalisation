@@ -29,6 +29,7 @@ dependencies:
   - cython >= 0.29.17
   - celltypist >= 1.7.1
   - mygene >= 3.2.2
+  - anndata == 0.11.4
   - pip:
       - pyro-ppl>=1.7.0
       - scvi-tools>=0.15.3

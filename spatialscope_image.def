@@ -2,7 +2,7 @@ bootstrap: docker
 from: tensorflow/tensorflow:latest-gpu
 
 %files
-    cell2loc_env.yml /root/cell2loc_env.yml
+    spatialscope_env.yml /root/spatialscope_env.yml
     
 %post
     apt-get update && apt-get install -y git wget && rm -rf /var/lib/apt/lists/*
@@ -13,9 +13,10 @@ from: tensorflow/tensorflow:latest-gpu
     eval "$(/usr/local/bin/micromamba shell hook -s posix)"
     /usr/local/bin/micromamba shell init -s bash -r /usr/local/micromamba  # this writes to your .bashrc file
     /usr/local/bin/micromamba shell hook --shell bash --root-prefix "$MAMBA_ROOT_PREFIX"
-    micromamba install -n base --file /root/cell2loc_env.yml 
+    micromamba install -n base --file /root/spatialscope_env.yml 
     micromamba clean --all --yes 
 
+    
 %environment
     # Ensure conda is in the PATH at runtime
     export PATH="/usr/local/miniconda3/bin:$PATH"
