@@ -1,11 +1,13 @@
 bootstrap: docker
-from: tensorflow/tensorflow:latest-gpu
+from: ubuntu:22.04
 
 %files
     spatialscope_env.yml /root/spatialscope_env.yml
     
 %post
-    apt-get update && apt-get install -y git wget && rm -rf /var/lib/apt/lists/*
+    apt-get update && apt-get install -y \
+     curl bzip2 \
+    && rm -rf /var/lib/apt/lists/*
    
     curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -C /usr/local -xvj bin/micromamba
     export MAMBA_ROOT_PREFIX=/usr/local/micromamba  # optional, defaults to ~/micromamba
