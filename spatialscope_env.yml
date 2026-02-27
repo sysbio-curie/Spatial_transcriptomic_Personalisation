@@ -4,7 +4,6 @@ channels:
   - bioconda
   - pytorch
   - fastai
-  - nvidia
 dependencies:
   - python=3.10
   - scanpy>=1.11
@@ -13,7 +12,6 @@ dependencies:
   - tensorflow=2.8.1
   - qpsolvers=2.4.0
   - pytorch=1.12.1
-  - cuda=11.8
   - pandas
   - matplotlib
   - anndata>=0.11

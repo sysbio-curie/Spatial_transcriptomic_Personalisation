@@ -1,5 +1,5 @@
 bootstrap: docker
-from: ubuntu:22.04
+from: tensorflow/tensorflow:2.19.0-gpu
 
 %files
     spatialscope_env.yml /root/spatialscope_env.yml
