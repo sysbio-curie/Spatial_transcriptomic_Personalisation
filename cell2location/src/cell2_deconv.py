@@ -22,6 +22,8 @@ parser = argparse.ArgumentParser(description="Process a parameter from SLURM.")
 parser.add_argument("--param", type=str, required=True, help="Parameter from SLURM job array")
 parser.add_argument("--data_dir", type=str, default="../../datav2", help="Directory containing data")
 parser.add_argument("--results_dir", type=str, default="../results", help="Directory to save results")
+parser.add_argument("--nuc_segm_dir", type=str, default="../../spatialscope/results/deconv_normalised", help="Directory containing nuclei segmentation results")
+
 args = parser.parse_args()
 slide = args.param
 print(f"Running script on slide: {slide}")
@@ -50,10 +52,8 @@ map_results_dir = os.path.join(slide_results_dir, "cell2location_map")
 os.makedirs(map_results_dir, exist_ok=True)
 
 # Nuclei segmentation results dir
-nuc_segm_dir = (
-    "../../spatialscope/results/deconv_normalised"
-)
-nuc_segm_dir = os.path.join(nuc_segm_dir, slide, "sp_adata_ns.h5ad")
+
+nuc_segm_dir = os.path.join(args.nuc_segm_dir, slide, "sp_adata_ns.h5ad")
 sp_nuc_adata = sc.read_h5ad(nuc_segm_dir)
 N_cells_spot_nuc_seg = round(sp_nuc_adata.obs["cell_count"].mean())
 
