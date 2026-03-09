@@ -19,19 +19,18 @@ use = "cluster"
 ## Define paths to data, models an results
 # Argument parser for slide value
 parser = argparse.ArgumentParser(description="Process a parameter from SLURM.")
-parser.add_argument(
-    "--param", type=str, required=True, help="Parameter from SLURM job array"
-)
+parser.add_argument("--param", type=str, required=True, help="Parameter from SLURM job array")
+parser.add_argument("--data_dir", type=str, default="../../datav2", help="Directory containing data")
+parser.add_argument("--results_dir", type=str, default="../results", help="Directory to save results")
 args = parser.parse_args()
 slide = args.param
 print(f"Running script on slide: {slide}")
 
 # ST dir
-vis_data_dir = "/mnt/beegfs/home/asobkow1/persistent/data/LUSC_v2"
-vis_slide_dir = os.path.join(vis_data_dir, slide)
+vis_slide_dir = os.path.join(args.data_dir, slide)
 
 # Results dir
-results_dir = "/mnt/beegfs/home/asobkow1/persistent/cell2loc/results"
+results_dir = args.results_dir
 os.makedirs(results_dir, exist_ok=True)
 
 # Sc Cell type reference results dir
@@ -52,7 +51,7 @@ os.makedirs(map_results_dir, exist_ok=True)
 
 # Nuclei segmentation results dir
 nuc_segm_dir = (
-    "/mnt/beegfs/home/asobkow1/persistent/spatialscope/results/deconv_normalised"
+    "../../spatialscope/results/deconv_normalised"
 )
 nuc_segm_dir = os.path.join(nuc_segm_dir, slide, "sp_adata_ns.h5ad")
 sp_nuc_adata = sc.read_h5ad(nuc_segm_dir)

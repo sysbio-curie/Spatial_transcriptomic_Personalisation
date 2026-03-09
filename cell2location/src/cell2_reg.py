@@ -7,11 +7,15 @@ import os
 import scanpy as sc
 import cell2location as cell2loc
 import matplotlib.pyplot as plt
+import argparse
 
 current_dir = os.getcwd()
+parser = argparse.ArgumentParser(description="Process a parameter from SLURM.")
+parser.add_argument("--sc_data_dir", type=str, required=True, help="Directory containing single-cell data")
+args = parser.parse_args()
 
 ## Import data
-sc_data_dir = os.path.join(current_dir, "data/Sc_data/Sc_cellxgene_filtered.h5ad")
+sc_data_dir = os.path.join(args.sc_data_dir,"../Sc_data/Sc_cellxgene_filtered.h5ad")
 adata_ref = sc.read_h5ad(sc_data_dir)
 
 ## Paths to results
