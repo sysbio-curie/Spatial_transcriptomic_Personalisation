@@ -8,6 +8,9 @@ import scanpy as sc
 import cell2location as cell2loc
 import matplotlib.pyplot as plt
 import argparse
+import anndata
+
+anndata.settings.allow_write_nullable_strings = True
 
 current_dir = os.getcwd()
 parser = argparse.ArgumentParser(description="Process a parameter from SLURM.")

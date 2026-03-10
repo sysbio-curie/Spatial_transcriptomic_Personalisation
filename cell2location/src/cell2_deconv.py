@@ -13,6 +13,8 @@ import matplotlib as mpl
 import warnings
 import celltypist as ct
 import argparse
+import anndata
+anndata.settings.allow_write_nullable_strings = True
 
 use = "cluster"
 
