@@ -10,34 +10,30 @@ import openslide
 
 from image_alignment import *
 
-use = "cluster"
-
 ## Read spatial transcripotmic data and the two image data files
-if use == "cluster":
-    parser = argparse.ArgumentParser(description="simulation sour_sep")
-    parser.add_argument(
-        "--Slide_Path",
-        type=str,
-        help="Path to spatial and image data of one slide",
-        default=None,
-    )
-    parser.add_argument(
-        "--Analysis_level",
-        type=int,
-        help="Resolution level of the image",
-        default=1,
-    )
-    args = parser.parse_args()
+parser = argparse.ArgumentParser(description="simulation sour_sep")
+parser.add_argument(
+    "--Slide_Path",
+    type=str,
+    help="Path to spatial and image data of one slide",
+    default=None,
+)
+parser.add_argument(
+    "--Analysis_level",
+    type=int,
+    help="Resolution level of the image",
+    default=1,
+)
+args = parser.parse_args()
 
-    adata_sp = sc.read_visium(args.Slide_Path)
-    ndpi_file = glob.glob(os.path.join(args.Slide_Path, "*.ndpi"))[0]  # wsi
-    tiff_file = glob.glob(os.path.join(args.Slide_Path, "*.tiff"))[0]  # template
-elif use == "local":
-    path_to_slide = "/home/agathes/work/LUSC_v2/18P06762_test"
-    adata_sp = sc.read_visium(path_to_slide)
-    ndpi_file = glob.glob(os.path.join(path_to_slide, "*.ndpi"))[0]  # wsi
-    tiff_file = glob.glob(os.path.join(path_to_slide, "*.tiff"))[0]  # template
+adata_sp = sc.read_visium(args.Slide_Path)
+# ndpi_file = glob.glob(os.path.join(args.Slide_Path, "*.ndpi"))[0]  # wsi
+# tiff_file = glob.glob(os.path.join(args.Slide_Path, "*.tiff"))[0]  # template
+ndpi_file = os.path.join(args.Slide_Path, f"{args.Slide_Path.split('/')[-2]}.ndpi")  # wsi
+tiff_file = os.path.join(args.Slide_Path, f"{args.Slide_Path.split('/')[-2]}.tiff")  # template
 
+print("NDPI file:", ndpi_file, "exists:", os.path.exists(ndpi_file))
+print("TIFF file:", tiff_file, "exists:", os.path.exists(tiff_file))
 
 ## Change names of vars and column name while saving the original var column to have enselbe_ids as var names
 adata_sp.var["feature_name"] = adata_sp.var_names
@@ -107,19 +103,14 @@ def correspondance_sp_image(adata_sp, ndpi_file, tiff_file, analysis_level):
 
 
 analysis_level = args.Analysis_level
+print(f"Analysis level: {analysis_level}")
 adata_sp, region_rgb = correspondance_sp_image(
     adata_sp, ndpi_file, tiff_file, analysis_level
 )
 # adata_sp = correspondance_sp_image(adata_sp, ndpi_file, tiff_file)
 
 ## Save preprocessed image and spatial transcriptomic data
-if use == "cluster":
-    region_rgb.save(os.path.join(args.Slide_Path, "prepro_image.tiff"), format="TIFF")
-    adata_sp.write(
-        os.path.join(args.Slide_Path, "filtered_feature_bc_matrix_prepro.h5ad")
-    )
-elif use == "local":
-    region_rgb.save(os.path.join(path_to_slide, "prepro_image.tiff"), format="TIFF")
-    adata_sp.write(
-        os.path.join(path_to_slide, "filtered_feature_bc_matrix_prepro.h5ad")
-    )
+region_rgb.save(os.path.join(args.Slide_Path, "prepro_image.tiff"), format="TIFF")
+adata_sp.write(
+    os.path.join(args.Slide_Path, "filtered_feature_bc_matrix_prepro.h5ad")
+)
