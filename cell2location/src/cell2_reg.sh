@@ -11,5 +11,5 @@
 #SBATCH --error=lusc_deconv_%j.err # Standard error log
 
 hostname
-apptainer exec --nv /mnt/beegfs/common/containers/singularity/dev/cell2location/cell2location.sif python cell2_reg.py
+apptainer run --nv /mnt/beegfs/home/vnoel/persistent/tcell_exclusion/Spatial_transcriptomic_Personalisation/cell2loc_image.sif cell2_reg.py
 

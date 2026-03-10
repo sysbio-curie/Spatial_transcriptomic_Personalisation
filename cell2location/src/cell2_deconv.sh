@@ -9,11 +9,16 @@
 #SBATCH --partition=dev_gpu  # Utilisation de la partition dev_gpu
 #SBATCH --cpus-per-task=1
 #SBATCH --gres=gpu:1
-#SBATCH --output=/mnt/beegfs/home/asobkow1/persistent/logs/lusc_deconv_%J_%j.out # Standard output
-#SBATCH --error=/mnt/beegfs/home/asobkow1/persistent/logs/lusc_deconv_%J_%j.err # Standard error log
+#SBATCH --output=/mnt/beegfs/home/vnoel/persistent/logs/lusc_deconv_%J_%j.out # Standard output
+#SBATCH --error=/mnt/beegfs/home/vnoel/persistent/logs/lusc_deconv_%J_%j.err # Standard error log
 
 hostname
 PARAMS=("17P02529" "18P06762" "18P08140" "17P04394" "18P06593" "18P03122" "18P02831")
 PARAM=${PARAMS[$SLURM_ARRAY_TASK_ID - 1]}
 echo "Running job $SLURM_ARRAY_TASK_ID on GPU with parameter: $PARAM"
-apptainer exec --nv /mnt/beegfs/common/containers/singularity/dev/cell2location/cell2location.sif python cell2_deconv.py --param $PARAM
+apptainer run --nv /mnt/beegfs/home/vnoel/persistent/tcell_exclusion/Spatial_transcriptomic_Personalisation/cell2loc_image.sif cell2_deconv.py --param $PARAM\
+  --data_dir /mnt/beegfs/home/vnoel/persistent/tcell_exclusion/datav2/\
+  --results_dir /mnt/beegfs/home/vnoel/persistent/tcell_exclusion/Spatial_transcriptomic_Personalisation/results/\
+  --nuc_segm_dir /mnt/beegfs/home/vnoel/persistent/tcell_exclusion/Spatial_transcriptomic_Personalisation/spatialscope/results/deconv_normalised/
+
+
