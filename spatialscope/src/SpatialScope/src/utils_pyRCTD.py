@@ -143,7 +143,7 @@ def get_der_fast(S, B, S_mat, gene_list, prediction, bulk_mode = False, likeliho
         d2_vec = d1_d2['d2_vec']
     
     grad = -d1_vec @ S
-    hess = (-d2_vec[:,None,None] * S_mat).sum(0)
+    hess = (-d2_vec.values[:,None,None] * S_mat).sum(0)
     return {'grad': grad, 'hess': hess}
 
 def psd(H):
