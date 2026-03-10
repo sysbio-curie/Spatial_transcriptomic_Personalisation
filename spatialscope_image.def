@@ -1,29 +1,30 @@
-bootstrap: docker
-from: tensorflow/tensorflow:2.19.0-gpu
+Bootstrap: docker
+From: nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
-%files
-    spatialscope_env.yml /root/spatialscope_env.yml
-    
 %post
-    apt-get update && apt-get install -y \
-     curl bzip2 \
-    && rm -rf /var/lib/apt/lists/*
-   
-    curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -C /usr/local -xvj bin/micromamba
-    export MAMBA_ROOT_PREFIX=/usr/local/micromamba  # optional, defaults to ~/micromamba
-    export MAMBA_EXE='/usr/local/bin/micromamba'
-    eval "$(/usr/local/bin/micromamba shell hook -s posix)"
-    /usr/local/bin/micromamba shell init -s bash -r /usr/local/micromamba  # this writes to your .bashrc file
-    /usr/local/bin/micromamba shell hook --shell bash --root-prefix "$MAMBA_ROOT_PREFIX"
-    micromamba install -n base --file /root/spatialscope_env.yml 
-    micromamba clean --all --yes 
+    # Install Miniconda
+    apt-get update && apt-get install -y python3-pip \
+        openslide-tools \
+        libopenslide-dev \
+        python3-dev \
+        build-essential \
+        libgl1 \
+        libglib2.0-0 \
+        libsm6 \
+        libxrender1 \
+        libxext6 \
+        python3-virtualenv
+    
+    virtualenv /opt/venv
+    /opt/venv/bin/python3 -m pip install pip --upgrade
+    /opt/venv/bin/python3 -m pip install --no-cache-dir torch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 scanpy==1.11.1 squidpy==1.6.2 stardist==0.8.3 \
+    	tensorflow-gpu==2.8.1 qpsolvers==2.4.0 pandas==2.3.3 matplotlib==3.10.8 anndata==0.11.4 scipy==1.8.1 tqdm==4.64.0 scikit-learn==1.1.1 \
+    	openslide-python==1.3.1 mygene==3.2.2 scikit-misc==0.1.4 ray==2.48.0 pydantic==1.10.14 opencv-python-headless==4.11.0.86 \
+    	h5py==3.15.1 dask[array]==2024.4.1 dask-image==2023.8.1 scikit-image==0.22.0 spatialdata==0.2.5 protobuf==3.20.0 qpsolvers[open_source_solvers]==2.4.0
 
-    
-%environment
-    # Ensure conda is in the PATH at runtime
-    export PATH="/usr/local/miniconda3/bin:$PATH"
-    export MAMBA_ROOT_PREFIX=/usr/local/micromamba  # optional, defaults to ~/micromamba
-    export MAMBA_EXE='/usr/local/bin/micromamba'
-    
-%runscript 
-    micromamba run -n base python $@
+
+    /opt/venv/bin/python3 -m pip install --no-cache-dir --force-reinstall \
+    	torch==1.12.1 --extra-index-url https://download.pytorch.org/whl/cu121 
+
+%runscript
+    /opt/venv/bin/python3 "$@"
