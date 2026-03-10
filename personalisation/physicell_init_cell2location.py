@@ -9,13 +9,15 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import anndata as ad
 
+ad.settings.allow_write_nullable_strings = True
+import argparse
+parser = argparse.ArgumentParser(description="Process parameters for Cell2loc deconvolution results transformation.")
+parser.add_argument("--deconv_results_dir", type=str, help="Directory containing Cell2loc deconvolution results")
+parser.add_argument("--model_init_results_dir", type=str, help="Directory to save model initialisation results")
+args = parser.parse_args()
 
 ## Define paths to deconvolution results
-results_dir = "/home/agathes/work/results"
-deconv_results_dir = os.path.join(
-    results_dir,
-    "Cell2loc_deconv/Sencond_run_changed_filter_sc_sp",
-)
+
 slides = [
     "17P02529",
     "18P06762",
@@ -25,19 +27,17 @@ slides = [
     "18P03122",
     "18P02831",
 ]
-model_init_results_dir = os.path.join(
-    results_dir, "model_initialisation/second_run/cell2loc_deconv"
-)
-os.makedirs(model_init_results_dir, exist_ok=True)
+
+os.makedirs(args.model_init_results_dir, exist_ok=True)
 
 ## Import data
 for slide in slides:
-    slide_deconv_dir = os.path.join(deconv_results_dir, slide)
+    slide_deconv_dir = os.path.join(args.deconv_results_dir, slide)
     adata_map = sc.read_h5ad(
         os.path.join(slide_deconv_dir, "cell2location_map/st_map.h5ad")
     )
 
-    slide_model_init_results = os.path.join(model_init_results_dir, slide)
+    slide_model_init_results = os.path.join(args.model_init_results_dir, slide)
     os.makedirs(slide_model_init_results, exist_ok=True)
 
     ## Extract coordinates and dominant cell type of each spot
